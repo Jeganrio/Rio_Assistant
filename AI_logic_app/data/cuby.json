@@ -1,0 +1,95 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": ["hello", "hi", "hey", "greetings","hai","hai cuby","hi cuby"],
+      "responses": ["Hello! How can I help you today?", "Hi there! How are you doing?"]
+    },
+    {
+      "tag": "greetings",
+      "patterns": ["hello how are you", "hi how are you", "hey there how are you", "hai cuby how are you", "hi cuby how are you", "greetings how are you", "hai how are you"],
+      "responses": ["Hello! I'm fine, How can I help you today?", "Hi there! I'm fine, How are you doing?"]
+    },
+    {
+      "tag": "goodbye",
+      "patterns": ["goodbye", "bye", "see you later"],
+      "responses": ["Goodbye! Take care and have a great day!", "Bye! Have a wonderful day ahead!"]
+    },
+    {
+      "tag": "about",
+      "patterns": ["who are you", "what are you", "tell me about yourself"],
+      "responses": ["My name is cuubie. As an AI model, I'm here to assist you with any questions or information you may need. I can provide support on a wide range of topics, engage in conversation, and help you find the answers you're looking for. Feel free to ask me anything!"]
+    },
+    {
+      "tag": "gratitude",
+      "patterns": ["thank you", "thanks a lot", "appreciate it"],
+      "responses": ["You're welcome!", "Glad I could assist you!", "You're awesome!"]
+    },
+    {
+      "tag": "compliment",
+      "patterns": ["you are great", "you are amazing", "you are awesome","you are so cool"],
+      "responses": ["Thank you! I'm here to brighten your day.", "You're too kind! It's a pleasure to assist you."]
+    },
+
+    {
+      "tag": "positive_affirmation",
+      "patterns": ["i feel stressed", "i'm feeling down", "i need some encouragement"],
+      "responses": ["Remember that you're strong and capable of handling anything that comes your way.", "Take a deep breath and remind yourself of all the progress you've made. You've got this!"]
+    },
+    {
+      "tag": "quote",
+      "patterns": ["share an inspiring quote", "give me a motivational quote", "i need some inspiration"],
+      "responses": ["\"Believe you can and you're halfway there.\" - Theodore Roosevelt", "\"The future belongs to those who believe in the beauty of their dreams.\" - Eleanor Roosevelt"]
+    },
+    {
+      "tag": "hobby",
+      "patterns": ["what are some hobbies i can try", "suggest a hobby", "i need a new hobby","hobby"],
+      "responses": ["How about trying painting or drawing? It can be a great way to express your creativity.", "Have you considered learning a musical instrument? It can be a rewarding and fun hobby."]
+    },
+    {
+      "tag": "relaxation_technique",
+      "patterns": ["how can i relax", "give me relaxation tips", "i need to destress"],
+      "responses": ["Try deep breathing exercises. Inhale slowly, hold for a few seconds, and exhale deeply.", "Meditation can be a wonderful way to relax and find inner peace. Give it a try!"]
+    },
+    {
+      "tag": "fun_fact",
+      "patterns": ["tell me a fun fact", "share an interesting fact", "i want to learn something new"],
+      "responses": ["Did you know that the average person walks the equivalent of three times around the world in their lifetime?", "In Japan, there is a practice called 'forest bathing' where people spend time in nature to improve their well-being."]
+    },
+    {
+      "tag": "favorite_book",
+      "patterns": ["what's your favorite book", "recommend a book", "tell me about a good book"],
+      "responses": ["As a chat bot, I don't have personal preferences. But some popular books are 'The Alchemist' by Paulo Coelho and 'To Kill a Mockingbird' by Harper Lee.", "I've heard great things about 'The Great Gatsby' by F. Scott Fitzgerald and 'Pride and Prejudice' by Jane Austen."]
+    },
+    {
+      "tag": "travel_destination",
+      "patterns": ["what's a great travel destination?", "recommend a place to visit", "tell me about a beautiful location"],
+      "responses": ["Have you considered visiting Bali, Indonesia? It's known for its stunning beaches and vibrant culture.", "If you enjoy historical sites, you might want to visit Rome, Italy. The Colosseum and Vatican City are must-see attractions."]
+    },
+    {
+      "tag": "favorite_movie",
+      "patterns": ["what's your favorite movie?", "recommend a movie", "tell me about a good film"],
+      "responses": ["As an AI, I don't have personal favorites. But some popular movies are 'The Shawshank Redemption' and 'The Godfather'.", "Many people enjoy movies like 'The Dark Knight' and 'Pulp Fiction'. They are considered classics."]
+    },
+    {
+      "tag": "exercise_suggestion",
+      "patterns": ["what's a good exercise to try?", "recommend a workout", "i need an exercise suggestion"],
+      "responses": ["How about going for a brisk walk or jog? It's a simple yet effective form of exercise.", "You can try a bodyweight workout at home. Exercises like push-ups, squats, and planks can work multiple muscle groups."]
+    },
+    {
+      "tag": "mindfulness_tip",
+      "patterns": ["give me a mindfulness tip", "how can i practice mindfulness?", "teach me a mindful exercise"],
+      "responses": ["Take a few moments to focus on your breath. Notice the sensation of each inhale and exhale.", "Try a body scan meditation where you bring attention to different parts of your body, starting from your toes and moving up to your head."]
+    },
+    {
+      "tag": "recipe_suggestion",
+      "patterns": ["can you suggest a recipe?", "i need a recipe idea", "what should i cook today?"],
+      "responses": ["How about trying a simple pasta dish with your favorite sauce and some fresh vegetables?", "You can make a delicious stir-fry with colorful veggies, protein of your choice, and a flavorful sauce."]
+    },
+    {
+      "tag": "music_recommendation",
+      "patterns": ["recommend some music", "i need new songs to listen to", "what's a good playlist?"],
+      "responses": ["I can suggest some popular artists like Ed Sheeran, Beyoncé, or Coldplay. Let me know your preferences!"]
+    }
+  ]
+}

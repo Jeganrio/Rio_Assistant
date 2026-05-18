@@ -1,0 +1,103 @@
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: lightgrey;
+    color: #333;
+}
+
+.container {
+    width: 80%;
+    margin: 0 auto;
+}
+
+header {
+    background-color: #333;
+    color: #fff;
+    padding: 20px 0;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 3em;
+    margin-bottom: 10px;
+    color: skyblue;
+    transition: color 0.3s ease-in-out;
+}
+
+header h1:hover {
+    color: orange;
+}
+
+header p {
+    font-size: 1.2em;
+    color: #ccc;
+}
+
+.main-content {
+    padding: 40px 0;
+}
+
+article ol {
+    color: black;
+    font-size: 1.5em;
+}
+
+article h2 {
+    color: black;
+    font-size: 2em;
+    margin-bottom: 10px;
+    transition: color 0.3s ease-in-out;
+}
+
+article h2:hover {
+    color: orange;
+}
+
+article table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+article th, article td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    font-size: 1.5em;
+    text-align: left;
+}
+
+.feature-description {
+    color: #666;
+}
+
+footer {
+    background-color: #333;
+    color: #fff;
+    padding: 20px 0;
+    text-align: center;
+}
+
+/* Additional styling for the tech effects */
+article {
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 30px;
+    margin-bottom: 30px;
+    position: relative;
+    transition: transform 0.3s ease-in-out;
+}
+
+article::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 60%;
+    height: 2px;
+    background-color: #ddd;
+    transform: translateX(-50%);
+}
+
+article:hover {
+    transform: scale(1.05);
+}
