@@ -61,6 +61,7 @@ from googlesearch import search as google_search_iter
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from cuby.config import settings as app_settings
 from cuby import models
+from cuby.database import SessionLocal
 from AI_logic_app.llm import generate_response
 
 # ── MCP integration ────────────────────────────────────────────────────────
@@ -807,14 +808,6 @@ def _is_wake_command(command: str) -> bool:
     )
 
 # ── DB ─────────────────────────────────────────────────────────────────────
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-engine = create_engine(app_settings.DATABASE_URL,
-                       connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
 def save_data_in_db(query: str, answers) -> None:
     db = SessionLocal()
     try:
