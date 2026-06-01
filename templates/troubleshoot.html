@@ -1,131 +1,195 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CUBY</title>
-    <link rel =  'icon' href = "{% static 'images/logo_3.png' %}" type = image/x-icon>
-    <link rel="stylesheet" href="{% static 'css/user_manual_style.css' %}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CUBY AI Assistant troubleshooting guide">
+  <title>CUBY Troubleshoot</title>
+  <link rel="icon" href="/static/images/logo_3.png" type="image/x-icon">
+  <link rel="stylesheet" href="/static/css/support_pages.css">
 </head>
 <body>
+  <main class="support-shell">
+    <nav class="support-nav" aria-label="Support navigation">
+      <a class="brand" href="/">
+        <img src="/static/images/logo_3.png" alt="CUBY logo">
+        <span>
+          <span class="brand-name">CUBY Assistant</span>
+          <span class="brand-subtitle">Troubleshooting and setup checks</span>
+        </span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/about">About</a>
+        <a href="/user_manual">User Manual</a>
+        <a href="/troubleshoot" aria-current="page">Troubleshoot</a>
+      </div>
+    </nav>
 
-<header>
-    <div class="container">
-        <h1>CUBY.AI Troubleshoot</h1>
-        <p>Troubleshooting Guide for CUBY.AI</p>
+    <section class="support-hero">
+      <div class="hero-main">
+        <div class="eyebrow">Troubleshoot</div>
+        <h1>Fix the common CUBY issues fast.</h1>
+        <p class="lead">
+          This guide matches the current build: bilingual voice, MCP tools,
+          live alerts, Gmail/calendar, Spotify, weather, jobs, and TNPDCL
+          human-confirmed power-cut checks.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="/">Return Home</a>
+          <a class="button secondary" href="/user_manual">Command Guide</a>
+        </div>
+      </div>
+      <aside class="hero-side">
+        <ul class="status-list">
+          <li><span class="status-key">First fix</span><span class="status-value">Restart Start AI once</span></li>
+          <li><span class="status-key">Voice fix</span><span class="status-value">Say calibrate microphone</span></li>
+          <li><span class="status-key">Tamil fix</span><span class="status-value">Say switch to Tamil</span></li>
+          <li><span class="status-key">Server</span><span class="status-value">uvicorn main:app --reload</span></li>
+        </ul>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Status checklist</div>
+          <h2>Before debugging commands</h2>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="feature">
+          <h3>Server is running</h3>
+          <p>Confirm the terminal shows Uvicorn running on <span class="command">http://127.0.0.1:8000</span>.</p>
+          <div class="tag-row"><span class="status ok">Required</span></div>
+        </article>
+        <article class="feature">
+          <h3>Microphone is selected</h3>
+          <p>Windows privacy settings must allow microphone access for Python and the browser.</p>
+          <div class="tag-row"><span class="status ok">Required</span></div>
+        </article>
+        <article class="feature">
+          <h3>Network is available</h3>
+          <p>Weather, news, Gmail, Calendar, Google TTS, TNPDCL, and job searches need internet access.</p>
+          <div class="tag-row"><span class="status warn">Online tools</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Common issues</div>
+          <h2>Fix by symptom</h2>
+        </div>
+      </div>
+      <div class="command-table-wrap">
+        <table class="command-table">
+          <thead>
+            <tr>
+              <th>Problem</th>
+              <th>What to do</th>
+              <th>Why it happens</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>CUBY becomes silent after a few commands</td>
+              <td>Say <span class="command">calibrate microphone</span>, reduce background noise, then restart Start AI if needed.</td>
+              <td>The recognizer can adapt to fan/noise levels and raise the energy threshold too high.</td>
+            </tr>
+            <tr>
+              <td>Wake word works only in English</td>
+              <td>Start with <span class="command">Hey CUBY</span>, then say <span class="command">switch to Tamil</span>. Startup resets to English by design.</td>
+              <td>Default startup language is English so the assistant has a predictable first wake flow.</td>
+            </tr>
+            <tr>
+              <td>Tamil is understood but replies are not Tamil</td>
+              <td>Say <span class="command">switch to Tamil language</span>. If TTS fails, check internet because Tamil neural voice may need online synthesis.</td>
+              <td>Tamil voice uses Edge/gTTS-style playback when available and falls back to installed system voice.</td>
+            </tr>
+            <tr>
+              <td>Cannot switch back to English</td>
+              <td>Say <span class="command">switch to English</span>, <span class="command">English language</span>, or type it in the command box.</td>
+              <td>Tamil speech may be transcribed as Tanglish; typing once is the quickest reset.</td>
+            </tr>
+            <tr>
+              <td>Spotify opens but wrong song plays</td>
+              <td>Use a complete title and artist: <span class="command">open Spotify and play New York Nagaram A R Rahman</span>.</td>
+              <td>Spotify ranking can show videos, playlists, or old queue items before the exact song.</td>
+            </tr>
+            <tr>
+              <td>Gmail or Calendar asks for permission</td>
+              <td>Complete Google sign-in. If Calendar shows API disabled, enable Google Calendar API in the Google Cloud project and retry.</td>
+              <td>Google tools require OAuth and the correct API to be enabled for your credentials.</td>
+            </tr>
+            <tr>
+              <td>Weather gives the wrong city</td>
+              <td>Say the city last and clearly: <span class="command">weather tomorrow in Trichy</span>. Update <span class="command">WEATHER_ALERT_CITY</span> if needed.</td>
+              <td>Short city names and mixed-language phrases can be mis-parsed without a clear location.</td>
+            </tr>
+            <tr>
+              <td>Power-cut official page needs confirmation</td>
+              <td>Say <span class="command">confirm official power cut in Karumandapam</span>, enter the TNPDCL captcha manually, and submit.</td>
+              <td>TNPDCL uses captcha. CUBY can guide and read results, but it will not bypass captcha.</td>
+            </tr>
+            <tr>
+              <td>Water-cut alert not found</td>
+              <td>Try <span class="command">water cut in Ponnagar</span> and check the source list. Use Corporation helpline if no online notice exists.</td>
+              <td>Water interruptions are not always published in a machine-readable official page.</td>
+            </tr>
+            <tr>
+              <td>News count is not respected</td>
+              <td>Say <span class="command">top 20 Indian news</span> or <span class="command">top 10 Trichy politics news</span>.</td>
+              <td>Dynamic news routing needs a count and topic/location phrase to avoid generic headlines.</td>
+            </tr>
+            <tr>
+              <td>Naukri auto-apply does not submit jobs</td>
+              <td>Use CUBY to open guided searches, then review and submit applications yourself.</td>
+              <td>Final application submission is sensitive and remains human-controlled.</td>
+            </tr>
+            <tr>
+              <td>Playwright official confirmation is unavailable</td>
+              <td>Run <span class="command">python -m playwright install chromium</span> inside the venv if the browser engine is missing.</td>
+              <td>The Python package and browser engine are separate installs.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Recovery commands</div>
+          <h2>Useful commands when stuck</h2>
+        </div>
+      </div>
+      <div class="grid two">
+        <article class="feature">
+          <h3>Voice recovery</h3>
+          <p><span class="command">calibrate microphone</span><br><span class="command">switch to English</span><br><span class="command">switch to female voice</span></p>
+        </article>
+        <article class="feature">
+          <h3>Service checks</h3>
+          <p><span class="command">anything important today</span><br><span class="command">what is weather in Trichy</span><br><span class="command">check my calendar</span></p>
+        </article>
+        <article class="feature">
+          <h3>Utility checks</h3>
+          <p><span class="command">power cut in Ponnagar today</span><br><span class="command">water supply cut in Karumandapam</span><br><span class="command">confirm official power cut in Trichy</span></p>
+        </article>
+        <article class="feature">
+          <h3>Typed fallback</h3>
+          <p>Use the command box on the home screen for long mail, job, calendar, or mixed Tamil-English commands.</p>
+        </article>
+      </div>
+    </section>
+
+    <div class="callout">
+      <strong>Privacy reminder:</strong> Gmail, Calendar, job portals, captcha pages, booking pages, payment pages, and final submissions should be reviewed by you before any sensitive action is completed.
     </div>
-</header>
 
-<div class="main-content">
-    <div class="container">
-
-        <article>
-            <h2>CUBY not responding:</h2>
-            <ol>
-                <li>Ensure microphone is enabled and properly connected.</li>
-                <li>Check internet connection if required for specific commands.</li>
-                <li>Restart CUBY or your device.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Misunderstanding commands:</h2>
-            <ol>
-                <li>Speak clearly and avoid background noise.</li>
-                <li>Try rephrasing your command more simply.</li>
-                <li>Check if the command requires specific keywords or formatting.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Time/Date (Commands 2 & 3):</h2>
-            <ol>
-                <li>If providing incorrect information, check if CUBY uses your local time settings or needs manual adjustment.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Questions (Command 4):</h2>
-            <ol>
-                <li>If CUBY can't define the answer, specify the context or source of the question.</li>
-                <li>Ensure your question is complete and well-formed.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Notepad Functions (Commands 5-9 & 29):</h2>
-            <ol>
-                <li>If notes aren't saving, check file permissions or storage space.</li>
-                <li>Ensure "Writer" command is used for manual typing input.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Web Search (Command 10):</h2>
-            <ol>
-                <li>If search results are inaccurate, refine your query or check your default browser settings.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Computer Control (Commands 11-13):</h2>
-            <ol>
-                <li>Make sure you have administrator privileges to execute these actions.</li>
-                <li>Ensure confirmation prompts are acknowledged for successful execution.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Music Playback (Commands 14 & 15):</h2>
-            <ol>
-                <li>Verify if your songs are accessible and compatible with the media player.</li>
-                <li>Double-check song names or try searching by artist/album for better accuracy.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Remember/Recall (Commands 16 & 17):</h2>
-            <ol>
-                <li>Make sure you used the "Remember that" command properly beforehand.</li>
-                <li>Use specific keywords or context when asking for remembered commands.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Screenshot (Command 18):</h2>
-            <ol>
-                <li>Check if screenshots are saved to the designated location.</li>
-                <li>Ensure necessary permissions are granted for CUBY to access storage.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Symbol Art (Command 24):</h2>
-            <ol>
-                <li>Verify the image format is compatible for conversion.</li>
-                <li>Try adjusting image size or clarity for better conversion results.</li>
-            </ol>
-        </article>
-        
-        <article>
-            <h2>Offline Mode (Command 33):</h2>
-            <ol>
-                <li>Confirm if CUBY requires an internet connection for certain commands.</li>
-                <li>Ensure offline functionality is properly enabled before using offline mode.</li>
-            </ol>
-        </article>
-        
-        <!-- Additional articles for more troubleshooting sections -->
-
-    </div>
-</div>
-
-<footer>
-    <div class="container">
-        <p>&copy; 2024 CUBY.AI. All rights reserved.</p>
-    </div>
-</footer>
-
+    <p class="footer">CUBY troubleshooting guide for the current MCP-enabled build.</p>
+  </main>
 </body>
 </html>

@@ -55,7 +55,7 @@ cover/
 *.mo
 *.pot
 
-# Django stuff:
+# Runtime database/logs
 *.log
 local_settings.py
 db.sqlite3
@@ -127,6 +127,15 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Local Google OAuth credentials/tokens
+token.json
+calendar_token.json
+credentials.json
+AI_logic_app/data/reminders.json
+AI_logic_app/data/voice_settings.json
+AI_logic_app/data/weather_alert_state.json
+AI_logic_app/data/utility_alert_state.json
 
 # Spyder project settings
 .spyderproject

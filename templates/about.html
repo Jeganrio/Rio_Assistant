@@ -1,68 +1,145 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CUBY</title>
-    <link rel =  'icon' href = "{% static 'images/logo_3.png' %}" type = image/x-icon>
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
-        integrity="sha512-JZV54MabfmZh9W7GinUc9MJAr6JF5uAwW7VQZf8wEQNM8vJin87wWU4I2NlV6eJ0zB/FWwOsgAJjACFSMIe2vw=="
-        crossorigin="anonymous" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="About CUBY AI Assistant">
+  <title>About CUBY</title>
+  <link rel="icon" href="/static/images/logo_3.png" type="image/x-icon">
+  <link rel="stylesheet" href="/static/css/support_pages.css">
 </head>
-
 <body>
+  <main class="support-shell">
+    <nav class="support-nav" aria-label="Support navigation">
+      <a class="brand" href="/">
+        <img src="/static/images/logo_3.png" alt="CUBY logo">
+        <span>
+          <span class="brand-name">CUBY Assistant</span>
+          <span class="brand-subtitle">Local voice AI for work, alerts, and daily help</span>
+        </span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/about" aria-current="page">About</a>
+        <a href="/user_manual">User Manual</a>
+        <a href="/troubleshoot">Troubleshoot</a>
+      </div>
+    </nav>
 
-    <header>
-        <div class="container">
-            <h1>CUBY Assistant With GENERATIVE AI</h1>
-            <p>Unleashing the Power of Intelligent Assistance</p>
+    <section class="support-hero">
+      <div class="hero-main">
+        <div class="eyebrow">About the assistant</div>
+        <h1>CUBY is your desktop AI control center.</h1>
+        <p class="lead">
+          CUBY listens, speaks, opens apps, checks live information, and connects
+          your personal workflow through MCP-style tools. It is built for fast
+          local use with English and Tamil support, proactive alerts, and a clear
+          human-confirmation boundary for sensitive actions.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="/">Start CUBY</a>
+          <a class="button secondary" href="/user_manual">View Commands</a>
         </div>
-    </header>
-
-    <section class="main-content">
-        <div class="container">
-            <article>
-                <h2>A Brief Introduction</h2>
-                <p>CUBY is a groundbreaking AI assistant designed to transform the way you interact with technology. Tailored for versatility and efficiency, it seamlessly integrates into your digital life, offering a sophisticated solution for a diverse range of tasks.</p>
-            </article>
-            <br>
-            <article>
-                <h2>Key Features</h2><br>
-                <p class="feature-heading"><h4>Intelligent Interaction </h4></p>
-                <p class="feature-description"> CUBY Assistant provides an intuitive and natural conversational experience, adapting to your communication style. Speech recognition capabilities further enhance the fluidity of interactions, making communication effortless.</p>
-                <p class="feature-heading"><br><h4>Productivity Enhancement</h4></p>
-                <p class="feature-description"> Boost your workflow with a suite of productivity tools that simplify tasks, manage files, and ensure a seamless digital environment. CUBY is your ally in enhancing efficiency and streamlining your work processes.</p>
-                <p class="feature-heading"><h4><br>Entertainment and Exploration</h4></p>
-                <p class="feature-description"> Embark on a journey of entertainment tailored to your preferences. Discover new content, enjoy humor, and explore multimedia features, all at your fingertips with CUBY.</p>
-                <!-- Add more features here --><br>
-            </article>
-
-            <article>
-                <h2>Seamless Integration</h2>
-                <p>Experience a seamless integration across various devices and platforms. Whether you're using CUBY on your computer, mobile device, or any other smart gadget, the assistant effortlessly adapts to your environment, ensuring a consistent and reliable experience.</p>
-            </article>
-            <br>
-            <article>
-                <h2>Privacy and Security</h2>
-                <p>Your privacy is paramount. CUBY prioritizes the security of your data, implementing robust measures to ensure that your interactions remain private and confidential. Your information is safeguarded at every step of the way.</p>
-            </article>
-            <br>
-            <article>
-                <h2>Continuous Learning and Improvement</h2>
-                <p>CUBY is a dynamic entity that evolves with continuous learning algorithms. These algorithms enable the assistant to adapt to changing user needs, providing an ever-improving and dynamic experience. Your feedback and interactions contribute to the ongoing refinement of the assistant's capabilities.</p>
-            </article>
-        </div>
+      </div>
+      <aside class="hero-side" aria-label="Current capability snapshot">
+        <ul class="status-list">
+          <li><span class="status-key">Language</span><span class="status-value">English, Tamil, Tanglish</span></li>
+          <li><span class="status-key">Voice</span><span class="status-value">Female or male, switchable</span></li>
+          <li><span class="status-key">Alerts</span><span class="status-value">Weather, calendar, utility, reminders</span></li>
+          <li><span class="status-key">MCP</span><span class="status-value">Apps, web data, Gmail, jobs, media</span></li>
+        </ul>
+      </aside>
     </section>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 CUBY Assistant. All rights reserved.</p>
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Core platform</div>
+          <h2>What CUBY can do now</h2>
         </div>
-    </footer>
+        <p>These pages reflect the latest assistant features added to this build.</p>
+      </div>
+      <div class="grid">
+        <article class="feature">
+          <h3>Voice and language</h3>
+          <p>Starts in English with female voice by default. You can switch to Tamil, back to English, and choose male or female voice by command.</p>
+          <div class="tag-row">
+            <span class="tag">English</span>
+            <span class="tag">Tamil</span>
+            <span class="tag">Male/Female voice</span>
+          </div>
+        </article>
+        <article class="feature">
+          <h3>Daily briefing</h3>
+          <p>Combines weather, rain timing, calendar events, reminders, and Gmail interview or assessment updates into one fast summary.</p>
+          <div class="tag-row">
+            <span class="tag">Weather</span>
+            <span class="tag">Calendar</span>
+            <span class="tag">Gmail</span>
+          </div>
+        </article>
+        <article class="feature">
+          <h3>Local controls</h3>
+          <p>Opens installed apps, manages media playback, launches Spotify or YouTube, checks CPU and battery, and handles common desktop tasks.</p>
+          <div class="tag-row">
+            <span class="tag">Apps</span>
+            <span class="tag">Spotify</span>
+            <span class="tag">YouTube</span>
+          </div>
+        </article>
+        <article class="feature">
+          <h3>Live information</h3>
+          <p>Gets dynamic news, weather forecast, train pages, flight data when configured, and smart rain or heat advice for Trichy or other cities.</p>
+          <div class="tag-row">
+            <span class="tag">News</span>
+            <span class="tag">Forecast</span>
+            <span class="tag">Train info</span>
+          </div>
+        </article>
+        <article class="feature">
+          <h3>Utility alerts</h3>
+          <p>Checks power-cut and water-cut notices for Ponnagar, Karumandapam, and Trichy using official pages plus public fallback feeds.</p>
+          <div class="tag-row">
+            <span class="tag">TNPDCL</span>
+            <span class="tag">Trichy Corporation</span>
+            <span class="tag">Water supply</span>
+          </div>
+        </article>
+        <article class="feature">
+          <h3>Guided job search</h3>
+          <p>Opens Naukri, LinkedIn, or Indeed searches for roles such as Gen AI and Python Developer. Final applications remain user-controlled.</p>
+          <div class="tag-row">
+            <span class="tag">Naukri</span>
+            <span class="tag">Python</span>
+            <span class="tag">Gen AI</span>
+          </div>
+        </article>
+      </div>
+    </section>
 
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Safety model</div>
+          <h2>Automation with confirmation where it matters</h2>
+        </div>
+      </div>
+      <div class="grid two">
+        <article class="feature">
+          <h3>Automatic checks</h3>
+          <p>Weather alerts, due reminders, calendar notifications, Gmail interview scans, public news, and utility fallback checks can run in the background.</p>
+        </article>
+        <article class="feature">
+          <h3>Human-confirmed actions</h3>
+          <p>Captcha entry, final job application submission, payment, booking, and sensitive account actions require you to confirm or complete the step.</p>
+        </article>
+      </div>
+      <div class="callout">
+        <strong>TNPDCL note:</strong> the official outage page uses captcha. CUBY can open the page, guide the check, wait for you to enter captcha, and then read the submitted result.
+      </div>
+    </section>
+
+    <p class="footer">CUBY Assistant, updated for the current MCP-enabled build.</p>
+  </main>
 </body>
-
 </html>

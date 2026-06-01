@@ -1,0 +1,1 @@
+"""Cuby FastAPI backend package."""

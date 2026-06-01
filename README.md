@@ -1,135 +1,94 @@
-# Cuby Assistant with Generative AI 🤖
+# CUBY AI Assistant
 
-Cuby Assistant is an innovative project aimed at creating a versatile AI assistant with generative capabilities. By leveraging a range of modules and functions, Cuby offers users an interactive and intelligent experience. From speech recognition to system automation, Cuby Assistant is designed to simplify tasks and enhance productivity.
+CUBY is a local FastAPI-based desktop assistant with voice and typed command support. It includes English/Tamil language switching, male/female voice preference, weather and rain advice, current news, Gmail and Calendar integrations, reminders, media control, train/job helpers, and local utility alert checks.
 
-## Modules
+## Quick Start
 
-### Speech Recognition 🎙️
-Cuby Assistant utilizes speech recognition technology powered by the Google Speech Recognition API. Users can interact with Cuby using voice commands, which are accurately transcribed into text for processing.
+```powershell
+.\venv\Scripts\activate
+pip install -r requirements.txt
+python scripts\init_db.py
+uvicorn main:app --reload
+```
 
-### pyttsx3 🔊
-Integrate text-to-speech functionality into your projects with pyttsx3. This Python library enables Cuby to audibly respond to user queries or provide information, enhancing the user experience.
+Open the app at:
 
-### psutil 💻
-Effortlessly manage processes and system resources with psutil. Cuby utilizes this versatile Python library to monitor system health, access hardware information, and more.
+```text
+http://127.0.0.1:8000/
+```
 
-### Simple Transformers 🤖
-Harness the power of transformer-based models in natural language processing (NLP) tasks with Simple Transformers. Cuby employs this library to simplify NLP tasks such as text classification and named entity recognition.
+API docs:
 
-### Sequence Matcher 🎶
-Enable Cuby to identify the closest match for user queries with the Sequence Matcher module. This functionality is particularly useful for tasks like song title recognition.
+```text
+http://127.0.0.1:8000/docs
+```
 
-### Pyjokes 😄
-Add a touch of humor to Cuby's responses with Pyjokes. This Python library provides a collection of predefined jokes for entertainment purposes.
+You can also run:
 
-### Pywhatkit 🤖
-Automate common tasks and interactions with web services using Pywhatkit. From sending WhatsApp messages to playing YouTube videos, Cuby simplifies various functionalities for users.
+```powershell
+scripts\run_server.bat
+```
 
-### Pyautogui 🖱️
-Empower Cuby to automate mouse and keyboard actions with Pyautogui. This library is invaluable for automating repetitive tasks and creating GUI-based scripts.
+## Project Structure
 
-### Wikipedia 📚
-Access Wikipedia content seamlessly with the Wikipedia library. Cuby can search articles, retrieve summaries, and extract detailed information from Wikipedia entries.
+```text
+Cuby_Assistant-main/
+|-- main.py                  # Compatibility entrypoint for uvicorn main:app
+|-- cuby/                    # FastAPI backend package
+|   |-- main.py              # Application setup, routes, static pages
+|   |-- config.py            # App settings and paths
+|   |-- database.py          # SQLAlchemy engine/session
+|   |-- models.py            # SQLAlchemy models
+|   |-- schemas.py           # Pydantic schemas
+|   |-- api_routes.py        # Query/database API routes
+|   |-- ai_commands.py       # Assistant command API routes
+|   |-- mcp_router.py        # MCP REST API routes
+|   `-- mcp_tools.py         # MCP-style tool registry and tools
+|-- requirements.txt         # Python dependencies
+|-- Procfile                 # Deployment command
+|-- scripts/                 # Setup and local run helpers
+|-- docs/                    # API/config/reference documentation
+|-- templates/               # FastAPI-served HTML pages
+`-- AI_logic_app/
+    |-- AI_logic.py          # Core assistant loop and command routing
+    |-- interview_scheduler.py
+    |-- llm.py
+    |-- mcp_calendar.py
+    |-- mcp_gmail.py
+    |-- mcp_jobs.py
+    |-- mcp_media.py
+    |-- mcp_notification.py
+    |-- mcp_reminders.py
+    |-- data/                # Local assistant data
+    `-- static/              # Assets served at /static
+```
 
-### Pygetwindow 🖼️
-Interact with windows on the desktop effortlessly using Pygetwindow. Cuby utilizes this library for tasks involving window management in desktop applications.
+## Useful Commands
 
-### Googlesearch 🌐
-Execute Google searches directly from Cuby with the Googlesearch library. This functionality provides dynamic access to search results for information retrieval and web scraping tasks.
+```powershell
+# Initialize local folders and database
+python scripts\init_db.py
 
-### Requests 🌐
-Simplify HTTP requests with the Requests library. Cuby utilizes this library to interact with web services, handle responses, and more.
+# Run development server
+uvicorn main:app --reload
 
-### BeautifulSoup 🍵
-Parse HTML and XML documents effortlessly with BeautifulSoup. Cuby employs this library for extracting and processing data from web pages in web scraping projects.
+# Check dependencies
+python -m pip check
 
-### Newspaper 📰
-Scrape news articles from online sources with ease using the Newspaper library. Cuby simplifies the process of extracting and parsing articles for users.
+# Run container locally
+docker compose up --build
+```
 
-## Functions and Logic
+## Documentation
 
-### Get Command 🗣️
-Convert user voice commands into text for processing.
+- [FastAPI guide](docs/README_FASTAPI.md)
+- [API documentation](docs/API_DOCUMENTATION.md)
+- [Configuration guide](docs/CONFIGURATION.md)
+- [Quick reference](docs/QUICK_REFERENCE.md)
+- [Deployment guide](docs/DEPLOYMENT.md)
 
-### Chatbot 🤖
-Engage users in interactive conversations and provide relevant responses.
+## Runtime Notes
 
-### Main Loop 🔄
-Manage the flow of interactions between users and Cuby.
-
-### Turn Off ❌
-Control the shutdown process of Cuby.
-
-### Activate Offline 📴
-Switch between online and offline modes seamlessly.
-
-### Time and Date ⏰
-Provide users with current time and date information.
-
-### Generative AI 🧠
-Utilize transformer-based models for generating responses to user queries.
-
-### Make a Search 🔍
-Conduct searches on the web with default browsers.
-
-### Logout, Shutdown, Restart 🚪
-Perform system logout, shutdown, or restart operations.
-
-### Play Offline Songs 🎵
-Play offline songs from specified folders.
-
-### Play ▶️
-Play specific songs based on user input.
-
-### Remember That 🧠
-Store and recall user-provided information.
-
-### Technical Joke 😄
-Inject humor into interactions with technical jokes.
-
-### CPU 💻
-Retrieve CPU and battery information from the system.
-
-### Screenshot 📸
-Capture screenshots of the screen.
-
-### Minimize/Maximize ↔️
-Control window states on the desktop.
-
-### YouTube 🎥
-Search and play YouTube videos based on user input.
-
-### Settings ⚙️
-Access and modify system settings via the control panel.
-
-### This PC 🖥️
-Navigate file systems and access files and folders.
-
-### Press ⌨️
-Simulate keyboard key presses.
-
-### Activate Write 📝
-Enter writer mode for continuous text input.
-
-### Go To 🏃‍♂️
-Open applications and navigate the PC.
-
-### Close ❌
-Close active applications.
-
-## Get Started
-
-To get started with Cuby Assistant, simply clone this repository and follow the setup instructions in the documentation. Explore Cuby's capabilities and customize it to suit your needs!
-
-## Contributing
-
-We welcome contributions from the community to enhance Cuby Assistant's functionality and usability. Feel free to submit pull requests or open issues for feedback and suggestions.
-
-
-## Acknowledgements
-
-Special thanks to the creators and contributors of the libraries and modules used in this project for their invaluable contributions to the Python ecosystem.
-
-## Connect with Us
-
-For updates and discussions, contact nvengatesh7373@gmail.com.
+- Keep `.env`, `credentials.json`, `token.json`, and `calendar_token.json` private.
+- Static files are served from `AI_logic_app/static`.
+- The current app no longer uses Django files or dependencies.

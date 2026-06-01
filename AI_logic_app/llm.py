@@ -1,8 +1,8 @@
 import os
 import openai
-from config import settings as app_settings
+from cuby.config import settings as app_settings
 
-# Initialize OpenAI API key from config or environment
+# Initialize OpenAI API key from app settings or environment
 api_key = str(app_settings.OPENAI_API_KEY) if getattr(app_settings, 'OPENAI_API_KEY', None) else os.environ.get('OPENAI_API_KEY')
 if api_key:
     os.environ.setdefault('OPENAI_API_KEY', api_key)

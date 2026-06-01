@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: cuby-assistant
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: commit
+    healthCheckPath: /health
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: CUBY_CLOUD
+        value: "1"
+      - key: WEATHER_ALERT_CITY
+        value: "Trichy"
+      - key: UTILITY_ALERT_LOCATION
+        value: "Ponnagar, Karumandapam, Trichy"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cuby-db
+          property: connectionString
+
+databases:
+  - name: cuby-db
+    plan: free
+    region: singapore

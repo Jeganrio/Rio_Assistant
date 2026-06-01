@@ -1,212 +1,209 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CUBY</title>
-    <link rel =  'icon' href = "{% static 'images/logo_3.png' %}" type = image/x-icon>
-    <link rel="stylesheet" href="{% static 'css/user_manual_style.css' %}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CUBY AI Assistant user manual">
+  <title>CUBY User Manual</title>
+  <link rel="icon" href="/static/images/logo_3.png" type="image/x-icon">
+  <link rel="stylesheet" href="/static/css/support_pages.css">
 </head>
 <body>
+  <main class="support-shell">
+    <nav class="support-nav" aria-label="Support navigation">
+      <a class="brand" href="/">
+        <img src="/static/images/logo_3.png" alt="CUBY logo">
+        <span>
+          <span class="brand-name">CUBY Assistant</span>
+          <span class="brand-subtitle">Command guide and examples</span>
+        </span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/about">About</a>
+        <a href="/user_manual" aria-current="page">User Manual</a>
+        <a href="/troubleshoot">Troubleshoot</a>
+      </div>
+    </nav>
 
-<header>
-    <div class="container">
-        <h1>CUBY.AI User Manual</h1>
-        <p>Your AI Assistant Guide</p>
-    </div>
-</header>
+    <section class="support-hero">
+      <div class="hero-main">
+        <div class="eyebrow">User manual</div>
+        <h1>Speak naturally. CUBY routes the task.</h1>
+        <p class="lead">
+          Start with "Hey CUBY", then ask in English, Tamil, or Tanglish. Use the
+          typed command box on the home page when voice recognition is noisy.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="/">Open Assistant</a>
+          <a class="button secondary" href="/troubleshoot">Fix an Issue</a>
+        </div>
+      </div>
+      <aside class="hero-side">
+        <ul class="status-list">
+          <li><span class="status-key">Wake</span><span class="status-value">Hey CUBY</span></li>
+          <li><span class="status-key">Language</span><span class="status-value">Switch to Tamil / English</span></li>
+          <li><span class="status-key">Voice</span><span class="status-value">Switch to male / female voice</span></li>
+          <li><span class="status-key">Briefing</span><span class="status-value">Anything important today</span></li>
+        </ul>
+      </aside>
+    </section>
 
-<div class="main-content">
-    <div class="container">
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Quick start</div>
+          <h2>Best daily flow</h2>
+        </div>
+      </div>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-number">1</span>
+          <div>
+            <h3>Start the assistant</h3>
+            <p>Click Start AI or say <span class="command">Hey CUBY</span>. CUBY starts in English with female voice.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-number">2</span>
+          <div>
+            <h3>Choose voice and language</h3>
+            <p>Say <span class="command">switch to Tamil</span>, <span class="command">switch to English</span>, <span class="command">switch to male voice</span>, or <span class="command">switch to female voice</span>.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-number">3</span>
+          <div>
+            <h3>Ask for the briefing</h3>
+            <p>Say <span class="command">anything important today</span> to collect weather, rain advice, reminders, calendar, and Gmail updates quickly.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
 
-        <article>
-            <h2>Keys for Handling CUBY.AI</h2>
-            <table>
-                <tr>
-                    <th>SI.NO</th>
-                    <th>COMMANDS</th>
-                    <th>FUNCTIONS</th>
-                </tr>
-                <tr>
-                    <td>1</td>
-                    <td>Hey CUBY</td>
-                    <td>To start CUBY</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>Time</td>
-                    <td>For time</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>Date</td>
-                    <td>For date</td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td>[Any questioning words] … (or) Questions</td>
-                    <td>To define the answer</td>
-                </tr>
-                <tr>
-                    <td>5</td>
-                    <td>Write … long note …</td>
-                    <td>For Generating Long answers in Notepad</td>
-                </tr>
-                <tr>
-                    <td>6</td>
-                    <td>Write… short…</td>
-                    <td>For Generating short answer on Notepad</td>
-                </tr>
-                <tr>
-                    <td>7</td>
-                    <td>Write… program ...</td>
-                    <td>To Generate programs on Notepad</td>
-                </tr>
-                <tr>
-                    <td>8</td>
-                    <td>Write and Explain … program …</td>
-                    <td>For generating Programs and its Explanations</td>
-                </tr>
-                <tr>
-                    <td>9</td>
-                    <td>Write …</td>
-                    <td>For Generating answers in Notepad</td>
-                </tr>
-                <tr>
-                    <td>10</td>
-                    <td>Make a search about…</td>
-                    <td>To search queries in default browser</td>
-                </tr>
-                <tr>
-                    <td>11</td>
-                    <td>Log out my pc (Confirmation will be asked by CUBY. Say yes to proceed)</td>
-                    <td>To lock computer</td>
-                </tr>
-                <tr>
-                    <td>12</td>
-                    <td>Shut down my pc (Confirmation will be asked by CUBY. Say yes to proceed)</td>
-                    <td>To shut down computer</td>
-                </tr>
-                <tr>
-                    <td>13</td>
-                    <td>Restart my pc (Confirmation will be asked by CUBY. Say yes to proceed)</td>
-                    <td>To restart computer</td>
-                </tr>
-                <tr>
-                    <td>14</td>
-                    <td>Play offline songs</td>
-                    <td>To play all songs in playlist</td>
-                </tr>
-                <tr>
-                    <td>15</td>
-                    <td>Play…</td>
-                    <td>To play a specific song</td>
-                </tr>
-                <tr>
-                    <td>16</td>
-                    <td>…. Remember that</td>
-                    <td>To remember some commands at once</td>
-                </tr>
-                <tr>
-                    <td>17</td>
-                    <td>Do you Remember anything?</td>
-                    <td>To repeat the remembered command</td>
-                </tr>
-                <tr>
-                    <td>18</td>
-                    <td>Screenshot</td>
-                    <td>To take screenshot</td>
-                </tr>
-                <tr>
-                    <td>19</td>
-                    <td>CPU</td>
-                    <td>For CPU and battery status</td>
-                </tr>
-                <tr>
-                    <td>20</td>
-                    <td>WHATSAPP</td>
-                    <td>To open WHATSAPP</td>
-                </tr>
-                <tr>
-                    <td>21</td>
-                    <td>Joke</td>
-                    <td>For some technical joke</td>
-                </tr>
-                <tr>
-                    <td>22</td>
-                    <td>Minimize</td>
-                    <td>To minimize screen</td>
-                </tr>
-                <tr>
-                    <td>23</td>
-                    <td>…YOUTUBE…</td>
-                    <td>To play YOUTUBE videos</td>
-                </tr>
-                <tr>
-                    <td>24</td>
-                    <td>Symbol</td>
-                    <td>To convert an image into symbol art</td>
-                </tr>
-                <tr>
-                    <td>25</td>
-                    <td>Settings</td>
-                    <td>To access control panel</td>
-                </tr>
-                <tr>
-                    <td>26</td>
-                    <td>This pc</td>
-                    <td>To explore library and other documents</td>
-                </tr>
-                <tr>
-                    <td>27</td>
-                    <td>Select all</td>
-                    <td>To select all text</td>
-                </tr>
-                <tr>
-                    <td>28</td>
-                    <td>Save</td>
-                    <td>To save a file(renaming has to be done by writer command)</td>
-                </tr>
-                <tr>
-                    <td>29</td>
-                    <td>Writer</td>
-                    <td>For typing</td>
-                </tr>
-                <tr>
-                    <td>30</td>
-                    <td>Press…</td>
-                    <td>To press a single key</td>
-                </tr>
-                <tr>
-                    <td>31</td>
-                    <td>Go to…</td>
-                    <td>To search anything (includes offline and online search)</td>
-                </tr>
-                <tr>
-                    <td>32</td>
-                    <td>Activate offline</td>
-                    <td>To leave the commanding mode</td>
-                </tr>
-                <tr>
-                    <td>33</td>
-                    <td>Turn off</td>
-                    <td>To leave CUBY</td>
-                </tr>
-            </table>
-            
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Commands</div>
+          <h2>Current CUBY command map</h2>
+        </div>
+        <p>These examples are flexible. CUBY normalizes common English, Tamil, and Tanglish phrases before running tools.</p>
+      </div>
+      <div class="command-table-wrap">
+        <table class="command-table">
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Say or type</th>
+              <th>What CUBY does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Wake and stop</td>
+              <td><span class="command">Hey CUBY</span><br><span class="command">stop listening</span></td>
+              <td>Starts or stops the listening loop.</td>
+            </tr>
+            <tr>
+              <td>Language</td>
+              <td><span class="command">switch to Tamil</span><br><span class="command">switch to English language</span></td>
+              <td>Changes recognition and reply language. Default startup is English.</td>
+            </tr>
+            <tr>
+              <td>Voice</td>
+              <td><span class="command">switch to male voice</span><br><span class="command">switch to female voice</span></td>
+              <td>Changes TTS voice preference. Default startup is female.</td>
+            </tr>
+            <tr>
+              <td>Microphone</td>
+              <td><span class="command">calibrate microphone</span><br><span class="command">reset mic sensitivity</span></td>
+              <td>Recalibrates recognition threshold when speech detection is weak.</td>
+            </tr>
+            <tr>
+              <td>Briefing</td>
+              <td><span class="command">anything important today</span><br><span class="command">summarize my day</span></td>
+              <td>Reads weather, rain timing, calendar, reminders, and Gmail items. Ask power or water cut commands separately.</td>
+            </tr>
+            <tr>
+              <td>Weather</td>
+              <td><span class="command">weather in Trichy</span><br><span class="command">weather tomorrow in Trichy</span><br><span class="command">next week rain forecast</span></td>
+              <td>Uses live weather and forecast data with rain or heat advice.</td>
+            </tr>
+            <tr>
+              <td>Power and water cuts</td>
+              <td><span class="command">power cut in Karumandapam today</span><br><span class="command">water cut in Ponnagar</span></td>
+              <td>Checks official pages and public fallback feeds for local utility alerts.</td>
+            </tr>
+            <tr>
+              <td>Official TNPDCL check</td>
+              <td><span class="command">confirm official power cut in Ponnagar</span></td>
+              <td>Opens TNPDCL with guided automation. You enter captcha; CUBY reads the submitted result.</td>
+            </tr>
+            <tr>
+              <td>Gmail</td>
+              <td><span class="command">check my email for interviews</span><br><span class="command">send email to contact name</span></td>
+              <td>Checks interview, assessment, meeting mail, or sends mail after the recipient is known.</td>
+            </tr>
+            <tr>
+              <td>Calendar</td>
+              <td><span class="command">check my calendar</span><br><span class="command">any meetings tomorrow</span></td>
+              <td>Reads Google Calendar when API access is configured. Falls back to Gmail meeting scans when possible.</td>
+            </tr>
+            <tr>
+              <td>Reminders</td>
+              <td><span class="command">remind me to call mum at 6 PM</span><br><span class="command">cancel reminder call mum</span></td>
+              <td>Adds, lists, completes, or deletes local reminders. Expired items are not shown as active reminders.</td>
+            </tr>
+            <tr>
+              <td>News</td>
+              <td><span class="command">top 10 Tamil Nadu news</span><br><span class="command">top 20 Indian finance news</span></td>
+              <td>Fetches dynamic Google News RSS results by count, topic, and location.</td>
+            </tr>
+            <tr>
+              <td>Media</td>
+              <td><span class="command">open YouTube and play New York Nagaram</span><br><span class="command">open Spotify and play New York Nagaram</span></td>
+              <td>Opens the platform and plays the requested item. Spotify uses the Songs filter and first matching song row.</td>
+            </tr>
+            <tr>
+              <td>Apps and desktop</td>
+              <td><span class="command">open Chrome</span><br><span class="command">open Spotify</span><br><span class="command">battery percentage</span></td>
+              <td>Launches installed apps, opens URLs, and reports CPU or battery status.</td>
+            </tr>
+            <tr>
+              <td>Jobs</td>
+              <td><span class="command">open Naukri jobs for Gen AI and Python developer in Tamil Nadu</span></td>
+              <td>Opens guided job searches. Final apply or submit actions stay under your control.</td>
+            </tr>
+            <tr>
+              <td>Train information</td>
+              <td><span class="command">check train availability Trichy to Chennai</span><br><span class="command">book train ticket Trichy to Chennai</span></td>
+              <td>Opens official railway or IRCTC pages. Login, payment, and booking confirmation are manual.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Tamil and Tanglish</div>
+          <h2>Supported Tamil-style examples</h2>
+        </div>
+      </div>
+      <div class="grid two">
+        <article class="feature">
+          <h3>Utility alerts</h3>
+          <p><span class="command">minthadai ponnagar irukka</span>, <span class="command">thanneer varatha karumandapam</span>, and similar Tamil/Tanglish commands are normalized to power and water alert checks.</p>
         </article>
+        <article class="feature">
+          <h3>News and weather</h3>
+          <p>Commands such as <span class="command">top 5 tamil nadu news</span> or <span class="command">trichy weather tomorrow</span> work through the same dynamic routing as English commands.</p>
+        </article>
+      </div>
+    </section>
 
-        <!-- Additional articles for other sections -->
-
-    </div>
-</div>
-
-<footer>
-    <div class="container">
-        <p>&copy; 2024 CUBY.AI. All rights reserved.</p>
-    </div>
-</footer>
-
+    <p class="footer">Use clear speech, pause between commands, and prefer the typed box for long email or job-search requests.</p>
+  </main>
 </body>
 </html>

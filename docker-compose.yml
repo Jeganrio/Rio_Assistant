@@ -1,0 +1,17 @@
+services:
+  cuby:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: "False"
+      WEATHER_ALERT_CITY: "Trichy"
+      UTILITY_ALERT_LOCATION: "Ponnagar, Karumandapam, Trichy"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
