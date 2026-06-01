@@ -233,6 +233,12 @@ async def start_ai():
     global ai_thread
 
     try:
+        if os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}:
+            return {
+                "status": "success",
+                "message": "Live server uses browser microphone mode. Press Start Mic on the page.",
+                "browser_mic": True,
+            }
 
         with ai_thread_lock:
 

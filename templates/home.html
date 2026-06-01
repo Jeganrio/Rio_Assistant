@@ -726,6 +726,9 @@
   <script>
     let latestSeq = 0;
     let speakingTimer = null;
+    let browserRecognition = null;
+    let browserMicActive = false;
+    let browserSpeechLang = localStorage.getItem('cubySpeechLang') || 'en-IN';
 
     function toggleMenu() {
       document.getElementById('optionsMenu').classList.toggle('show');
@@ -774,6 +777,39 @@
       responseArea.textContent = text || 'Ready.';
       setMood(mood || moodFromText(text));
       if (speaking) pulseSpeaking();
+    }
+
+    function isLiveServer() {
+      const host = window.location.hostname;
+      return host && !['localhost', '127.0.0.1', '::1'].includes(host);
+    }
+
+    function hasTamilText(text) {
+      return /[\u0B80-\u0BFF]/.test(String(text || ''));
+    }
+
+    function updateBrowserLanguageFromText(text) {
+      const value = String(text || '').toLowerCase();
+      if (value.includes('switch to tamil') || value.includes('tamil language') || hasTamilText(text)) {
+        browserSpeechLang = 'ta-IN';
+      } else if (value.includes('switch to english') || value.includes('english language')) {
+        browserSpeechLang = 'en-IN';
+      }
+      localStorage.setItem('cubySpeechLang', browserSpeechLang);
+    }
+
+    function speakInBrowser(text) {
+      if (!isLiveServer() || !('speechSynthesis' in window) || !text) return;
+      try {
+        const utterance = new SpeechSynthesisUtterance(String(text).slice(0, 420));
+        utterance.lang = hasTamilText(text) ? 'ta-IN' : browserSpeechLang;
+        utterance.rate = 0.96;
+        utterance.pitch = 1;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        // Browser speech is a convenience on cloud; text response remains primary.
+      }
     }
 
     function compactUpdateText(value) {
@@ -842,11 +878,11 @@
       }
     }
 
-    window.sendTypedCommand = async function sendTypedCommand() {
-      const input = document.getElementById('textInput');
-      const command = input.value.trim();
+    async function sendCommand(command, options = {}) {
+      command = String(command || '').trim();
       if (!command) return;
       showText(command, 'user-light', false);
+      updateBrowserLanguageFromText(command);
       try {
         const res = await fetch('/api/ai/command', {
           method: 'POST',
@@ -858,12 +894,101 @@
           ? data.data.response
           : data.message || 'No response';
         showText(response, moodFromText(response), true);
-        input.value = '';
+        updateBrowserLanguageFromText(`${command} ${response}`);
+        speakInBrowser(response);
+        if (!options.keepInput) {
+          document.getElementById('textInput').value = '';
+        }
         setTimeout(pollEvents, 250);
       } catch (err) {
         showText('Error sending command', 'alert-light', true);
+        speakInBrowser('Error sending command');
       }
+    }
+
+    window.sendTypedCommand = async function sendTypedCommand() {
+      const input = document.getElementById('textInput');
+      await sendCommand(input.value);
     };
+
+    function startBrowserMic() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        const message = 'Browser voice recognition is not supported here. Please use Chrome or type the command below.';
+        showText(message, 'alert-light', true);
+        speakInBrowser(message);
+        return;
+      }
+
+      if (browserMicActive && browserRecognition) {
+        browserMicActive = false;
+        browserRecognition.stop();
+        document.getElementById('runState').textContent = 'Standby';
+        document.getElementById('startButton').textContent = 'START AI';
+        showText('Browser microphone stopped.', 'clear-light', false);
+        return;
+      }
+
+      browserRecognition = new SpeechRecognition();
+      browserRecognition.continuous = true;
+      browserRecognition.interimResults = false;
+      browserRecognition.maxAlternatives = 1;
+      browserRecognition.lang = browserSpeechLang;
+
+      browserRecognition.onstart = () => {
+        browserMicActive = true;
+        document.getElementById('runState').textContent = 'Listening';
+        document.getElementById('startButton').textContent = 'STOP MIC';
+        showText('Browser microphone is listening.', 'clear-light', true);
+      };
+
+      browserRecognition.onresult = event => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          if (event.results[i].isFinal) {
+            transcript += event.results[i][0].transcript + ' ';
+          }
+        }
+        transcript = transcript.trim();
+        if (transcript) {
+          sendCommand(transcript, { fromVoice: true });
+        }
+      };
+
+      browserRecognition.onerror = event => {
+        const blocked = ['not-allowed', 'service-not-allowed'].includes(event.error);
+        const message = blocked
+          ? 'Please allow microphone permission in the browser address bar, then press Start AI again.'
+          : `Browser microphone error: ${event.error || 'unknown'}`;
+        showText(message, 'alert-light', true);
+        if (blocked) {
+          browserMicActive = false;
+          document.getElementById('startButton').textContent = 'START AI';
+          document.getElementById('runState').textContent = 'Mic blocked';
+        }
+      };
+
+      browserRecognition.onend = () => {
+        if (browserMicActive) {
+          window.setTimeout(() => {
+            try {
+              browserRecognition.lang = browserSpeechLang;
+              browserRecognition.start();
+            } catch (err) {
+              browserMicActive = false;
+              document.getElementById('startButton').textContent = 'START AI';
+              document.getElementById('runState').textContent = 'Standby';
+            }
+          }, 650);
+        }
+      };
+
+      try {
+        browserRecognition.start();
+      } catch (err) {
+        showText('Could not start browser microphone. Refresh the page and try again.', 'alert-light', true);
+      }
+    }
 
     document.getElementById('sendButton').addEventListener('click', window.sendTypedCommand);
     document.getElementById('textInput').addEventListener('keydown', event => {
@@ -874,6 +999,10 @@
     });
 
     document.getElementById('startButton').addEventListener('click', async () => {
+      if (isLiveServer()) {
+        startBrowserMic();
+        return;
+      }
       try {
         const res = await fetch('/start_ai');
         const data = await res.json();
@@ -886,6 +1015,10 @@
 
     pollEvents();
     setInterval(pollEvents, 1800);
+
+    if (isLiveServer()) {
+      document.getElementById('startButton').textContent = 'START MIC';
+    }
   </script>
 </body>
 </html>

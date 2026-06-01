@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import datetime
-import json
 import os
-import pickle
 import webbrowser
 from typing import Any
 
 from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+from AI_logic_app.google_auth import (
+    google_not_connected_message,
+    load_authorized_credentials,
+    load_client_config,
+)
 
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
@@ -43,20 +46,11 @@ class CalendarTool:
         token_path = os.path.join(self.base_dir, "calendar_token.json")
         credentials_path = os.path.join(self.base_dir, "credentials.json")
 
-        if os.path.exists(token_path):
-            try:
-                with open(token_path, "rb") as token:
-                    token_data = token.read()
-                try:
-                    self.creds = pickle.loads(token_data)
-                except Exception:
-                    self.creds = Credentials.from_authorized_user_info(
-                        json.loads(token_data.decode("utf-8")),
-                        SCOPES,
-                    )
-            except Exception as exc:
-                print(f"Error loading calendar_token.json: {exc}. Re-authenticating.")
-                self.creds = None
+        self.creds = load_authorized_credentials(
+            token_path,
+            SCOPES,
+            ("GOOGLE_CALENDAR_TOKEN_JSON", "GOOGLE_TOKEN_JSON"),
+        )
 
         if self.creds and not self.creds.has_scopes(SCOPES):
             print("Calendar token is missing required scopes. Re-authenticating.")
@@ -70,19 +64,15 @@ class CalendarTool:
                     self.creds = None
 
             if not self.creds or not self.creds.valid:
-                if not interactive:
-                    raise RuntimeError(
-                        "Google Calendar is not connected yet. "
-                        "Ask CUBY to check your calendar once to sign in."
-                    )
-                if not os.path.exists(credentials_path):
-                    raise FileNotFoundError(
-                        f"Missing {credentials_path}. Please download it from Google Cloud Console."
-                    )
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    credentials_path,
-                    SCOPES,
-                )
+                is_cloud = os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}
+                if not interactive or is_cloud:
+                    raise RuntimeError(google_not_connected_message("Google Calendar"))
+
+                client_config = load_client_config(credentials_path)
+                if not client_config:
+                    raise RuntimeError(google_not_connected_message("Google Calendar"))
+
+                flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
                 self.creds = flow.run_local_server(port=0)
 
             with open(token_path, "w", encoding="utf-8") as token:
@@ -95,8 +85,7 @@ class CalendarTool:
         fallback = "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com"
 
         try:
-            with open(credentials_path, "r", encoding="utf-8") as f:
-                raw = json.load(f)
+            raw = load_client_config(credentials_path) or {}
             client = raw.get("installed") or raw.get("web") or {}
             project = client.get("project_id", "")
             if not project:

@@ -15,6 +15,8 @@ Quick-start: in your main FastAPI app do:
 
 from __future__ import annotations
 
+import os
+import datetime
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
@@ -55,6 +57,12 @@ class AIResponse(BaseModel):
 async def start_ai(background_tasks: BackgroundTasks):
     """Start the AI assistant in background."""
     try:
+        if os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}:
+            return {
+                "status": "success",
+                "message": "Live server uses browser microphone mode. Press Start Mic on the page.",
+                "data": {"running": False, "browser_mic": True},
+            }
         background_tasks.add_task(AI_logic.startup)
         return {"status": "success", "message": "CUBY started successfully",
                 "data": {"running": True}}
@@ -126,19 +134,34 @@ async def execute_command(request: CommandRequest,
 
         # ── built-in commands ───────────────────────────────────────────
         if "time" in command:
-            AI_logic.cur_time()
+            response = f"The current time is {datetime.datetime.now().strftime('%H:%M:%S')}"
+            AI_logic.speak(response)
             return {"status": "success", "message": "Time spoken",
-                    "data": {"command": "time"}}
+                    "data": {"command": "time", "response": response}}
 
         elif "date" in command:
-            AI_logic.date()
+            now = datetime.datetime.now()
+            response = f"The current date is {now.day} {now.strftime('%B')} {now.year}"
+            AI_logic.speak(response)
             return {"status": "success", "message": "Date spoken",
-                    "data": {"command": "date"}}
+                    "data": {"command": "date", "response": response}}
 
         elif "cpu" in command or "battery" in command:
-            AI_logic.cpu()
+            psutil = getattr(AI_logic, "psutil", None)
+            if psutil:
+                usage = psutil.cpu_percent()
+                batt = psutil.sensors_battery()
+                parts = [f"CPU usage is {usage} percent."]
+                if batt:
+                    parts.append(f"Battery is at {batt.percent:.0f} percent.")
+                elif os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}:
+                    parts.append("Laptop battery is not available from the live server.")
+                response = " ".join(parts)
+            else:
+                response = "System status is not available right now."
+            AI_logic.speak(response)
             return {"status": "success", "message": "CPU/Battery info spoken",
-                    "data": {"command": "cpu"}}
+                    "data": {"command": "cpu", "response": response}}
 
         elif "screenshot" in command:
             AI_logic.screenshot()

@@ -1,15 +1,15 @@
-from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request # Added: Import Request for token refreshing
-from googleapiclient.errors import HttpError # Import HttpError
 import base64
-import json
 from email.mime.text import MIMEText
 import os
-import datetime # Import datetime for date calculations
-from datetime import timedelta # Import timedelta
-import pickle
+
+from AI_logic_app.google_auth import (
+    google_not_connected_message,
+    load_authorized_credentials,
+    load_client_config,
+)
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.modify",
@@ -49,20 +49,11 @@ class GmailTool:
         token_path = os.path.join(self.base_dir, "token.json")
         credentials_path = os.path.join(self.base_dir, "credentials.json")
 
-        if os.path.exists(token_path):
-            try:
-                with open(token_path, 'rb') as token:
-                    token_data = token.read()
-                try:
-                    self.creds = pickle.loads(token_data)
-                except Exception:
-                    self.creds = Credentials.from_authorized_user_info(
-                        json.loads(token_data.decode("utf-8")),
-                        SCOPES
-                    )
-            except Exception as e:
-                print(f"Error loading token.json: {e}. Re-authenticating.")
-                self.creds = None
+        self.creds = load_authorized_credentials(
+            token_path,
+            SCOPES,
+            ("GOOGLE_GMAIL_TOKEN_JSON", "GOOGLE_TOKEN_JSON"),
+        )
 
         if self.creds and not self.creds.has_scopes(SCOPES):
             print("Gmail token is missing required scopes. Re-authenticating.")
@@ -72,12 +63,18 @@ class GmailTool:
             if self.creds and self.creds.expired and self.creds.refresh_token:
                 self.creds.refresh(Request()) # No need for try-except here, let it propagate if it fails
             else:
-                if not os.path.exists(credentials_path):
-                    raise FileNotFoundError(
-                        f"Missing {credentials_path}. Please download it from Google Cloud Console."
-                    )
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    credentials_path, SCOPES)
+                is_cloud = os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}
+                if is_cloud:
+                    raise RuntimeError(google_not_connected_message("Gmail"))
+
+                client_config = load_client_config(credentials_path)
+                if not client_config:
+                    raise RuntimeError(google_not_connected_message("Gmail"))
+
+                flow = InstalledAppFlow.from_client_config(
+                    client_config,
+                    SCOPES,
+                )
                 self.creds = flow.run_local_server(port=0)
             
             # Save the credentials for the next run
