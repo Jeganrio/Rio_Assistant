@@ -23,6 +23,8 @@ def database_engine_kwargs(database_url: str) -> dict:
         engine_kwargs["connect_args"] = {"check_same_thread": False}
     else:
         engine_kwargs["pool_pre_ping"] = True
+        if backend_name == "postgresql":
+            engine_kwargs["connect_args"] = {"connect_timeout": 10}
 
     return engine_kwargs
 

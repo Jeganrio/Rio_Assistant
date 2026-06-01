@@ -32,8 +32,14 @@ from cuby.mcp_router import router as mcp_router
 # Scheduler
 from AI_logic_app.interview_scheduler import scheduler
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+
+def initialize_database_tables() -> None:
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Database tables ready")
+    except Exception as exc:
+        print(f"Database startup error: {exc}")
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -72,6 +78,11 @@ ai_thread_lock = threading.Lock()
 async def startup_event():
 
     print("Starting CUBY server...")
+
+    threading.Thread(
+        target=initialize_database_tables,
+        daemon=True,
+    ).start()
 
     # START SCHEDULER SAFELY
     try:
