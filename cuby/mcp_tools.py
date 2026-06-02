@@ -2309,9 +2309,6 @@ class BriefingTool(MCPTool):
         articles = self._first_items(news_result, "articles", 3)
         utility_alerts = self._first_items(utility_result, "alerts", 3)
 
-        rain_alert = weather_data.get("rain_summary", "")
-        weather_advice = weather_data.get("smart_advice") or []
-
         overview_parts = []
         if include_calendar and calendar_result.get("status") == "ok":
             overview_parts.append(f"{len(calendar_events)} calendar event(s)")
@@ -2322,11 +2319,7 @@ class BriefingTool(MCPTool):
             and gmail_result.get("status") == "ok"
             and not self._is_google_connection_warning(gmail_result)
         ):
-            overview_parts.append(f"{len(emails)} important Gmail item(s)")
-        if weather_data.get("rain_expected"):
-            overview_parts.append("rain alert")
-        if weather_data.get("heat_alert"):
-            overview_parts.append("heat alert")
+            overview_parts.append(f"{len(emails)} scheduled Gmail item(s)")
         if utility_alerts:
             overview_parts.append(f"{len(utility_alerts)} utility alert(s)")
 
@@ -2339,35 +2332,19 @@ class BriefingTool(MCPTool):
         }]
 
         if weather_result.get("status") == "ok" and weather_data:
-            weather_text = weather_data.get("summary") or (
+            weather_text = (
                 f"{weather_data.get('city', city)}: "
                 f"{weather_data.get('temperature_c')} C, "
                 f"{weather_data.get('condition', 'unknown')}."
             )
+            if weather_data.get("rain_expected") and weather_data.get("rain_summary"):
+                weather_text += f" {weather_data.get('rain_summary')}"
+            elif weather_data.get("heat_alert") and weather_data.get("heat_summary"):
+                weather_text += f" {weather_data.get('heat_summary')}"
             sections.append({
                 "title": "Weather",
                 "text": weather_text,
             })
-            rain_periods = weather_data.get("rain_periods_today") or []
-            if rain_periods:
-                period_text = "; ".join(
-                    (
-                        f"{item.get('period', 'today')}: {item.get('intensity', 'rain')} "
-                        f"from {item.get('first_time_label', 'soon')}, "
-                        f"{item.get('max_probability_pct', 0)}% chance"
-                    )
-                    for item in rain_periods[:4]
-                )
-                sections.append({
-                    "title": "Rain Timing",
-                    "text": period_text,
-                })
-            if weather_advice:
-                spoken_advice = weather_advice[1:3] if weather_data.get("rain_expected") else weather_advice[:2]
-                sections.append({
-                    "title": "Weather Advice",
-                    "text": " ".join(spoken_advice),
-                })
 
         if include_calendar and calendar_result.get("status") == "ok":
             if calendar_events:
@@ -2408,12 +2385,12 @@ class BriefingTool(MCPTool):
                 sections.append({
                     "title": "Gmail",
                     "text": (
-                        f"{len(emails)} interview, assessment, or meeting email(s) found. "
+                        f"{len(emails)} scheduled interview, assessment, or meeting email(s) found. "
                         f"{email_subjects}."
                     ),
                 })
             else:
-                sections.append({"title": "Gmail", "text": "No interview, assessment, or meeting emails found today."})
+                sections.append({"title": "Gmail", "text": "No scheduled interview, assessment, or meeting emails found today."})
         elif include_gmail and not self._is_google_connection_warning(gmail_result):
             sections.append({"title": "Gmail", "text": gmail_result.get("message", "Gmail unavailable.")})
 

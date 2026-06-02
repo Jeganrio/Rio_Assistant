@@ -124,6 +124,7 @@ def check_weather_alert():
             action="add",
             text=suggested_reminder["text"],
             due_at=suggested_reminder["due_at"],
+            source="weather",
         )
 
 

@@ -4,6 +4,7 @@ from google.auth.transport.requests import Request # Added: Import Request for t
 import base64
 from email.mime.text import MIMEText
 import os
+import re
 from urllib.parse import quote_plus, urlencode
 
 from AI_logic_app.google_auth import (
@@ -89,6 +90,113 @@ class GmailTool:
             },
             message
         )
+
+    @staticmethod
+    def _decode_body_data(data: str) -> str:
+        if not data:
+            return ""
+        try:
+            padded = data + ("=" * (-len(data) % 4))
+            return base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8", errors="ignore")
+        except Exception:
+            return ""
+
+    @classmethod
+    def _payload_text(cls, payload: dict) -> str:
+        chunks = []
+
+        def walk(part: dict):
+            mime_type = str(part.get("mimeType", "")).lower()
+            body = part.get("body") or {}
+            data = body.get("data", "")
+            if data and (mime_type.startswith("text/") or not mime_type):
+                text = cls._decode_body_data(data)
+                text = re.sub(r"<[^>]+>", " ", text)
+                text = re.sub(r"\s+", " ", text).strip()
+                if text:
+                    chunks.append(text)
+            for child in part.get("parts", []) or []:
+                walk(child)
+
+        walk(payload or {})
+        return " ".join(chunks)
+
+    @staticmethod
+    def _extract_schedule_links(text: str) -> list[str]:
+        all_links = re.findall(r"https?://[^\s<>\"')\]]+", text or "", flags=re.IGNORECASE)
+        schedule_terms = (
+            "meet.google.com",
+            "calendar.google.com",
+            "zoom.us",
+            "teams.microsoft.com",
+            "webex",
+            "calendly",
+            "hackerrank",
+            "hacker-rank",
+            "assessment",
+            "test",
+            "interview",
+            "coding",
+            "challenge",
+            "turing",
+        )
+        skip_terms = ("unsubscribe", "preferences", "privacy", "terms", "tracking", "mailtrack")
+        links = []
+        for link in all_links:
+            lowered = link.lower()
+            if any(term in lowered for term in skip_terms):
+                continue
+            if any(term in lowered for term in schedule_terms):
+                links.append(link.rstrip(".,;"))
+        if links:
+            return links[:5]
+
+        context = (text or "").lower()
+        strong_context = (
+            "interview" in context
+            or "assessment" in context
+            or "coding round" in context
+            or "online test" in context
+            or "technical round" in context
+            or "join meeting" in context
+            or "google meet" in context
+            or "teams meeting" in context
+            or "zoom meeting" in context
+        )
+        if strong_context:
+            return [
+                link.rstrip(".,;")
+                for link in all_links
+                if not any(term in link.lower() for term in skip_terms)
+            ][:5]
+        return []
+
+    @staticmethod
+    def _is_scheduled_email(subject: str, snippet: str, body: str, links: list[str]) -> bool:
+        text = f"{subject} {snippet} {body}".lower()
+        strong_terms = (
+            "interview",
+            "assessment",
+            "coding round",
+            "online test",
+            "technical round",
+            "hr round",
+            "aptitude test",
+            "assignment",
+            "hackerrank",
+            "coding challenge",
+            "calendar invite",
+            "scheduled",
+            "join meeting",
+            "google meet",
+            "teams meeting",
+            "zoom meeting",
+        )
+        generic_job_only = (
+            any(term in text for term in ("job alert", "job |", "is hiring", "job opportunity", "vacancy"))
+            and not any(term in text for term in strong_terms)
+        )
+        return bool(links and not generic_job_only and any(term in text for term in strong_terms))
 
     def _get_authenticated_service(self):
         """
@@ -183,21 +291,18 @@ class GmailTool:
                     "online test",
                     "technical round",
                     "hr round",
-                    "aptitude",
+                    "aptitude test",
                     "assignment",
                     "hacker rank",
                     "hackerrank",
                     "coding challenge",
-                    "walk-in",
-                    "walkin",
-                    "recruiter",
-                    "shortlisted",
                     "calendar invite",
                     "scheduled",
                     "meeting",
                     "google meet",
                     "teams meeting",
-                    "zoom"
+                    "zoom meeting",
+                    "join meeting"
                 ]
 
                 gmail_query_parts = []
@@ -236,7 +341,7 @@ class GmailTool:
                 results = service.users().messages().list(
                     userId="me",
                     q=final_gmail_query,
-                    maxResults=20 # Increased maxResults for broader search
+                    maxResults=20
                 ).execute()
 
                 msgs = results.get("messages", [])
@@ -244,21 +349,27 @@ class GmailTool:
 
                 detailed_emails = []
                 for msg_id in [m['id'] for m in found]:
-                    msg_detail = service.users().messages().get(userId='me', id=msg_id, format='metadata', metadataHeaders=['Subject', 'From', 'Date']).execute()
+                    msg_detail = service.users().messages().get(userId='me', id=msg_id, format='full').execute()
                     subject = next((header['value'] for header in msg_detail['payload']['headers'] if header['name'] == 'Subject'), 'No Subject')
                     sender = next((header['value'] for header in msg_detail['payload']['headers'] if header['name'] == 'From'), 'Unknown Sender')
                     date_received = next((header['value'] for header in msg_detail['payload']['headers'] if header['name'] == 'Date'), 'Unknown Date')
+                    snippet = msg_detail.get('snippet', '')
+                    body_text = self._payload_text(msg_detail.get("payload", {}))
+                    schedule_links = self._extract_schedule_links(f"{subject} {snippet} {body_text}")
+                    if not self._is_scheduled_email(subject, snippet, body_text, schedule_links):
+                        continue
                     detailed_emails.append({
                         'id': msg_id,
                         'subject': subject,
                         'from': sender,
                         'date': date_received,
-                        'snippet': msg_detail.get('snippet', '')
+                        'snippet': snippet,
+                        'links': schedule_links[:3],
                     })
 
                 return self._ok(
                     {"interviews": detailed_emails},
-                    f"Found {len(detailed_emails)} interview, assessment, or meeting emails."
+                    f"Found {len(detailed_emails)} scheduled interview, assessment, or meeting emails."
                 )
 
             # SEARCH MAIL

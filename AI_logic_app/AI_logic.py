@@ -119,8 +119,8 @@ VOICE_RECOGNITION_TIMEOUT = 10
 VOICE_AFTER_SPEAK_PAUSE = 1.0
 VOICE_RECALIBRATE_AFTER = 3
 VOICE_ENERGY_MIN = 140
-VOICE_ENERGY_MAX = 1200
-VOICE_ENERGY_SCALE = 1.05
+VOICE_ENERGY_MAX = 850
+VOICE_ENERGY_SCALE = 0.85
 VOICE_PREROLL_SECONDS = 0.35
 VOICE_AMBIENT_SAMPLES = 8
 
@@ -750,6 +750,22 @@ def _normalize_local_language_query(query: str) -> str:
     normalized = query
     for src, dst in replacements.items():
         normalized = normalized.replace(src, dst)
+    phonetic_replacements = {
+        "\u0b93\u0baa\u0bcd\u0baa\u0ba9\u0bcd": "open",
+        "\u0baa\u0bbf\u0bb3\u0bc7": "play",
+        "\u0bae\u0bc8 voice": "male voice",
+        "\u0bae\u0bc8 \u0bb5\u0bbe\u0baf\u0bcd\u0bb8\u0bcd": "male voice",
+        "\u0b9a\u0bc6\u0b9f\u0bcd\u0b9f\u0bbf\u0b99\u0bcd\u0bb8\u0bcd": "settings",
+        "\u0bb5\u0bbf\u0ba3\u0bcd\u0b9f\u0bcb": "windows",
+        "\u0bae\u0bc8\u0b95\u0bcd\u0bb0\u0bcb\u0b9a\u0bbe\u0baa\u0bcd\u0b9f\u0bcd": "microsoft",
+        "\u0b8e\u0b9f\u0bcd\u0b9c\u0bcd": "edge",
+        "\u0b95\u0bcb \u0baa\u0bc8\u0bb2\u0b9f\u0bcd": "copilot",
+        "\u0b95\u0bcb\u0baa\u0bc8\u0bb2\u0b9f\u0bcd": "copilot",
+        "\u0bb8\u0bcd\u0b95\u0bcd\u0bb0\u0bc0\u0ba9\u0bcd \u0bb7\u0bbe\u0b9f\u0bcd": "screenshot",
+        "\u0bb8\u0bcd\u0b95\u0bbf\u0bb0\u0bc0\u0ba9\u0bcd \u0bb7\u0bbe\u0b9f\u0bcd": "screenshot",
+    }
+    for src, dst in phonetic_replacements.items():
+        normalized = normalized.replace(src, dst)
     utility_phrase_replacements = {
         "கரண்ட் கட்": "current cut",
         "பவர் கட்": "power cut",
@@ -953,14 +969,12 @@ def _calibrate_microphone(recognizer, duration: float = 1.0) -> None:
 
 
 def _voice_recognition_languages() -> list[str]:
-    primary = _recognition_language()
-    fallback = "en-IN" if primary.lower().startswith("ta") else "ta-IN"
-    languages = [primary, fallback, "en-US"]
-    unique = []
-    for language in languages:
-        if language not in unique:
-            unique.append(language)
-    return unique
+    if get_assistant_language() == "tamil":
+        # Tamil mode can still hear English control phrases such as "switch to English".
+        return ["ta-IN", "en-IN"]
+    # English mode must stay English-only; Tamil fallback caused English commands
+    # to be misread as Tamil transliteration with high Google confidence.
+    return ["en-IN", "en-US"]
 
 
 def _pick_transcript(response) -> tuple[str, float]:
@@ -979,8 +993,6 @@ def _pick_transcript(response) -> tuple[str, float]:
 
 def _recognize_voice_audio(recognizer, audio) -> str:
     last_error = None
-    best_transcript = ""
-    best_confidence = 0.0
     for language in _voice_recognition_languages():
         try:
             response = recognizer.recognize_google(
@@ -989,10 +1001,9 @@ def _recognize_voice_audio(recognizer, audio) -> str:
                 show_all=True,
             )
             transcript, confidence = _pick_transcript(response)
-            if transcript and confidence >= best_confidence:
-                best_transcript = transcript
-                best_confidence = confidence
-                print(f"recognized candidate with {language} confidence={confidence:.2f}")
+            if transcript:
+                print(f"recognized with {language} confidence={confidence:.2f}")
+                return transcript.lower()
         except sr.UnknownValueError as exc:
             last_error = exc
             continue
@@ -1001,9 +1012,6 @@ def _recognize_voice_audio(recognizer, audio) -> str:
         except Exception as exc:
             last_error = exc
             continue
-    if best_transcript:
-        print(f"recognized best confidence={best_confidence:.2f}")
-        return best_transcript.lower()
     if last_error:
         raise last_error
     raise sr.UnknownValueError()
@@ -1283,10 +1291,10 @@ def _speak_result(result: dict) -> str:
     if "interviews" in data:
         emails = data["interviews"]
         if not emails:
-            summary = "No interview, assessment, or meeting emails found recently."
+            summary = "No scheduled interview, assessment, or meeting emails found recently."
             speak(summary)
             return summary
-        speak(f"Found {len(emails)} interview, assessment, or meeting emails.")
+        speak(f"Found {len(emails)} scheduled interview, assessment, or meeting emails.")
         for i, email in enumerate(emails[:3], 1):
             speak(f"{i}. {email.get('subject', 'No subject')}")
         return "\n".join(

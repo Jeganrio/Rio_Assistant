@@ -71,7 +71,10 @@ class ReminderTool:
         self.path.write_text(json.dumps(reminders, indent=2), encoding="utf-8")
 
     def _active_sorted(self, reminders: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        active = [r for r in reminders if not r.get("completed")]
+        active = [
+            r for r in reminders
+            if not r.get("completed") and not self._is_weather_generated(r)
+        ]
         return sorted(active, key=lambda r: (r.get("due_at") or "9999", r.get("created_at", "")))
 
     @staticmethod
@@ -81,6 +84,24 @@ class ReminderTool:
     def _is_expired(self, reminder: dict[str, Any], now: datetime.datetime) -> bool:
         due = self._parse_dt(reminder.get("due_at", ""))
         return bool(due and due.astimezone() < now)
+
+    @staticmethod
+    def _is_weather_generated(reminder: dict[str, Any]) -> bool:
+        text = ReminderTool._normalize_key(reminder.get("text", ""))
+        source = ReminderTool._normalize_key(reminder.get("source", ""))
+        weather_terms = (
+            "rain possible",
+            "heavy rain",
+            "moderate rain",
+            "light rain",
+            "carry umbrella",
+            "umbrella",
+            "raincoat",
+            "weather alert",
+            "heat alert",
+            "stay hydrated",
+        )
+        return source == "weather" or any(term in text for term in weather_terms)
 
     def _visible_sorted(
         self,
@@ -93,7 +114,11 @@ class ReminderTool:
         else:
             items = [
                 r for r in reminders
-                if not r.get("completed") and not self._is_expired(r, now)
+                if (
+                    not r.get("completed")
+                    and not self._is_expired(r, now)
+                    and not self._is_weather_generated(r)
+                )
             ]
         return sorted(
             items,
@@ -157,6 +182,7 @@ class ReminderTool:
         window_minutes: int = 0,
         max_results: int = 20,
         mark_notified: bool = False,
+        source: str = "",
     ) -> dict:
         action = (action or "list").lower().strip()
 
@@ -194,6 +220,7 @@ class ReminderTool:
                     "completed_at": "",
                     "notified": False,
                     "notified_at": "",
+                    "source": (source or "").strip(),
                 }
                 reminders.append(reminder)
                 self._save(reminders)
@@ -207,7 +234,11 @@ class ReminderTool:
                 items = self._serialize(reminders, include_completed, now)[:max(1, int(max_results or 20))]
                 active_count = len([
                     r for r in reminders
-                    if not r.get("completed") and not self._is_expired(r, now)
+                    if (
+                        not r.get("completed")
+                        and not self._is_expired(r, now)
+                        and not self._is_weather_generated(r)
+                    )
                 ])
                 expired_count = len([
                     r for r in reminders

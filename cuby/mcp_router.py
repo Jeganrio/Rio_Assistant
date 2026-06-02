@@ -107,6 +107,7 @@ class ReminderRequest(BaseModel):
     text: str = ""
     due_at: str = ""
     reminder_id: str = ""
+    source: str = ""
     include_completed: bool = False
     window_minutes: int = 0
     max_results: int = 20
@@ -460,6 +461,7 @@ async def run_reminders(req: ReminderRequest):
         text=req.text,
         due_at=req.due_at,
         reminder_id=req.reminder_id,
+        source=req.source,
         include_completed=req.include_completed,
         window_minutes=req.window_minutes,
         max_results=req.max_results,
