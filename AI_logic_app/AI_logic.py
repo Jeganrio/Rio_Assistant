@@ -1149,34 +1149,30 @@ def startup() -> None:
     if not VOICE_AVAILABLE:
         print("CUBY started (no voice — PyAudio missing).")
         return
+    if RUNNING:
+        print("CUBY is already listening.")
+        return
     RUNNING = True
     _calibrate_microphone(_get_voice_recognizer())
     print("CUBY started. Listening…")
-    while RUNNING:
-        try:
-            command = takecommandexceptional(5)
-            if not command:
-                continue
-            if _is_wake_command(command):
-                speak("Hi, welcome back!")
-                hour = datetime.datetime.now().hour
-                if 6 <= hour < 12:
-                    speak("Good morning!")
-                elif 12 <= hour < 15:
-                    speak("Good afternoon!")
-                elif 15 <= hour < 19:
-                    speak("Good evening!")
-                else:
-                    speak("Good night!")
-                main()
-            elif "turn off" in command:
-                shut_down()
-        except KeyboardInterrupt:
-            speak("Goodbye!")
-            break
-        except Exception as exc:
-            print(f"CUBY loop error: {exc}")
-            speak("Sorry, that command failed. I am still listening.")
+    try:
+        speak("Hi, welcome back!")
+        hour = datetime.datetime.now().hour
+        if 6 <= hour < 12:
+            speak("Good morning!")
+        elif 12 <= hour < 15:
+            speak("Good afternoon!")
+        elif 15 <= hour < 19:
+            speak("Good evening!")
+        else:
+            speak("Good night!")
+        main()
+    except KeyboardInterrupt:
+        speak("Goodbye!")
+    except Exception as exc:
+        print(f"CUBY loop error: {exc}")
+        speak("Voice listening had a problem. Please press Start AI again.")
+        RUNNING = False
 
 
 def shut_down() -> None:
@@ -1425,9 +1421,22 @@ def _speak_result(result: dict) -> str:
         if not matches:
             return msg
         return "\n".join(
-            f"{i + 1}. {item.get('name', 'match')} - {item.get('path', '')}"
+            (
+                f"{i + 1}. {item.get('name', 'match')} "
+                f"({item.get('type', 'file')})"
+            )
             for i, item in enumerate(matches)
         )
+
+    # --- desktop local path result ---
+    if (
+        isinstance(data, dict)
+        and data.get("path")
+        and isinstance(data.get("browser_action"), dict)
+        and data["browser_action"].get("type") == "open_local_path"
+    ):
+        speak(msg)
+        return msg
 
     # --- desktop background app monitor ---
     if "background_apps" in data:
@@ -3249,6 +3258,10 @@ def main() -> None:
             continue
 
         # 1 — try MCP tools first
+        if _is_wake_command(query):
+            speak("I am listening. Tell me what to do.")
+            continue
+
         mcp_resp = _try_mcp(query, allow_voice_prompts=True)
         if mcp_resp:
             try:

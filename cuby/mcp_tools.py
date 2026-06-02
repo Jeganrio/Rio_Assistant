@@ -766,7 +766,7 @@ class DesktopSystemTool(MCPTool):
         self._open_in_explorer(path)
         return self._ok(
             {"path": str(path), "browser_action": self._browser_action(str(path))},
-            f"Screenshot saved: {path}",
+            f"Screenshot saved as {path.name}. Opened the file location.",
         )
 
     @staticmethod
