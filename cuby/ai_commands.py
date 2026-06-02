@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import datetime
 from typing import Optional, List
+from urllib.parse import quote_plus
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -146,8 +147,12 @@ async def execute_command(request: CommandRequest,
         # ── MCP dispatch first ──────────────────────────────────────────
         mcp_resp = AI_logic._try_mcp(command)
         if mcp_resp:
+            payload = {"response": mcp_resp}
+            browser_action = getattr(AI_logic, "consume_browser_action", lambda: None)()
+            if browser_action:
+                payload["browser_action"] = browser_action
             return {"status": "success", "message": "MCP command processed",
-                    "data": {"response": mcp_resp}}
+                    "data": payload}
 
         # ── built-in commands ───────────────────────────────────────────
         if "time" in command:
@@ -226,15 +231,26 @@ async def execute_command(request: CommandRequest,
             return {"status": "success", "message": "Command processed",
                     "data": {"response": response}}
 
-        response = f"I did not find a direct CUBY action for {command}. I searched the web for it."
+        search_url = f"https://www.google.com/search?q={quote_plus(command)}"
+        browser_action = {
+            "type": "open_url",
+            "url": search_url,
+            "label": "Open search results",
+            "target": "_blank",
+        }
+        response = f"I opened web results for {command}."
         try:
             AI_logic.GenAI().google_search(command)
         except Exception:
-            response = f"I did not find a direct CUBY action for {command}."
+            pass
         AI_logic.speak(response)
         return {"status": "success",
                 "message": "Search fallback used",
-                "data": {"command": command, "response": response}}
+                "data": {
+                    "command": command,
+                    "response": response,
+                    "browser_action": browser_action,
+                }}
 
     except Exception as e:
         raise HTTPException(status_code=500,
@@ -250,8 +266,12 @@ async def query_ai(request: CommandRequest):
         # MCP check
         mcp_resp = AI_logic._try_mcp(request.command)
         if mcp_resp:
+            payload = {"response": mcp_resp}
+            browser_action = getattr(AI_logic, "consume_browser_action", lambda: None)()
+            if browser_action:
+                payload["browser_action"] = browser_action
             return {"status": "success", "message": "Response generated",
-                    "data": {"response": mcp_resp}}
+                    "data": payload}
 
         # LLM
         try:

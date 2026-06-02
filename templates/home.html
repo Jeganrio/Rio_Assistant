@@ -1027,6 +1027,21 @@
       return message || 'No response';
     }
 
+    function performBrowserAction(action) {
+      if (!action || action.type !== 'open_url' || !action.url) return;
+      window.setTimeout(() => {
+        let opened = null;
+        try {
+          opened = window.open(action.url, action.target || '_blank', 'noopener');
+        } catch (err) {
+          opened = null;
+        }
+        if (!opened) {
+          window.location.href = action.url;
+        }
+      }, 180);
+    }
+
     async function sendCommand(command, options = {}) {
       command = normalizeLiveCommand(command);
       if (!command) return;
@@ -1041,10 +1056,12 @@
         });
         const data = await res.json();
         const response = assistantResponseFromApi(data, command);
+        const browserAction = data && data.data ? data.data.browser_action : null;
         showText(response, moodFromText(response), true);
         updateBrowserLanguageFromText(`${command} ${response}`);
         updateBrowserVoiceGenderFromText(`${command} ${response}`);
         speakInBrowser(response);
+        performBrowserAction(browserAction);
         if (!options.keepInput) {
           document.getElementById('textInput').value = '';
         }

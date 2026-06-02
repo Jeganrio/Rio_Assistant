@@ -39,6 +39,23 @@ class MediaControlTool:
             "message": message
         }
 
+    @staticmethod
+    def _is_cloud():
+        return os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}
+
+    @staticmethod
+    def _browser_action(url, label="Open"):
+        return {
+            "type": "open_url",
+            "url": url,
+            "label": label,
+            "target": "_blank",
+        }
+
+    @staticmethod
+    def _spotify_search_url(query):
+        return f"https://open.spotify.com/search/{quote_plus(query)}"
+
     def _play_youtube(self, query):
         search_url = (
             "https://www.youtube.com/results?search_query="
@@ -52,12 +69,14 @@ class MediaControlTool:
                     "https://www.youtube.com"
                     + match.group(1).replace(r"\u0026", "&")
                 )
-                webbrowser.open(video_url)
+                if not self._is_cloud():
+                    webbrowser.open(video_url)
                 return video_url
         except Exception:
             pass
 
-        webbrowser.open(search_url)
+        if not self._is_cloud():
+            webbrowser.open(search_url)
         return search_url
 
     def _open_spotify_app(self):
@@ -171,11 +190,26 @@ class MediaControlTool:
                 if platform == "youtube":
                     url = self._play_youtube(query)
                     return self._ok(
-                        {"query": query, "url": url},
+                        {
+                            "query": query,
+                            "url": url,
+                            "browser_action": self._browser_action(url, "Open YouTube"),
+                        },
                         f"Playing {query} on YouTube"
                     )
 
                 elif platform == "spotify":
+                    if self._is_cloud() or py is None:
+                        url = self._spotify_search_url(query)
+                        return self._ok(
+                            {
+                                "query": query,
+                                "url": url,
+                                "browser_action": self._browser_action(url, "Open Spotify"),
+                            },
+                            f"Opened Spotify web search for {query}. Select the song if Spotify asks."
+                        )
+
                     opened_with = self._open_spotify_app()
 
                     # WAIT FOR SPOTIFY LOAD

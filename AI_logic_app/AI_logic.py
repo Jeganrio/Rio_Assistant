@@ -136,6 +136,7 @@ _PYGAME_MIXER_READY = False
 _UI_EVENT_LOCK = threading.Lock()
 _UI_EVENTS: list[dict] = []
 _UI_EVENT_SEQ = 0
+_LAST_BROWSER_ACTION: dict | None = None
 _EDGE_VOICES = {
     ("tamil", "male"): "ta-IN-ValluvarNeural",
     ("tamil", "female"): "ta-IN-PallaviNeural",
@@ -166,6 +167,18 @@ def get_ui_events(since: int = 0) -> dict:
             "latest_seq": _UI_EVENT_SEQ,
             "running": RUNNING,
         }
+
+
+def _set_browser_action(action: dict | None) -> None:
+    global _LAST_BROWSER_ACTION
+    _LAST_BROWSER_ACTION = action if isinstance(action, dict) else None
+
+
+def consume_browser_action() -> dict | None:
+    global _LAST_BROWSER_ACTION
+    action = _LAST_BROWSER_ACTION
+    _LAST_BROWSER_ACTION = None
+    return action
 
 
 def _load_voice_settings() -> dict:
@@ -1114,6 +1127,15 @@ def _speak_result(result: dict) -> str:
 
     data = result.get("data") or {}
     msg = result.get("message", "Done.")
+    action = data.get("browser_action") if isinstance(data, dict) else None
+    if isinstance(action, dict):
+        _set_browser_action(action)
+    elif isinstance(data, dict) and data.get("url"):
+        _set_browser_action({
+            "type": "open_url",
+            "url": data["url"],
+            "target": "_blank",
+        })
 
     # --- daily briefing ---
     if "briefing" in data:
@@ -1661,6 +1683,8 @@ def _is_briefing_request(q: str) -> bool:
         "summarise today",
         "important updates",
         "important update",
+        "important today",
+        "today important",
         "what is important today",
         "anything important",
         "check everything",
@@ -1992,12 +2016,56 @@ def _parse_job_request(q: str) -> dict:
     }
 
 
+def _normalize_mail_command_phrase(q: str) -> str:
+    value = f" {q.lower().strip()} "
+    replacements = {
+        " sentamil ": " send mail ",
+        " send tamil ": " send mail ",
+        " sent mail ": " send mail ",
+        " send a email ": " send email ",
+        " send an email ": " send email ",
+        " compose mail ": " send mail ",
+        " compose email ": " send email ",
+    }
+    for src, dst in replacements.items():
+        value = value.replace(src, dst)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _extract_voice_email_address(q: str) -> str:
+    value = q.lower()
+    value = re.sub(r"\bg\s*mail\b", "gmail", value)
+    value = re.sub(r"\bdot\b", ".", value)
+    value = re.sub(r"\s*\.\s*", ".", value)
+    value = re.sub(r"\b(?:at|add|ad)\b", "@", value)
+    value = re.sub(r"\b(?:r|are|our)\s+gmail\.com\b", "@gmail.com", value)
+    value = re.sub(r"(?<!@)\bgmail\.com\b", "@gmail.com", value)
+
+    candidates = []
+    for marker in (" to ", " for "):
+        if marker in value:
+            candidates.append(value.split(marker, 1)[1])
+    candidates.append(value)
+
+    email_pattern = re.compile(
+        r"[a-z0-9._%+\-]+@[a-z0-9.\-]+?\.(?:com|in|org|net|edu|co\.in)"
+    )
+    for candidate in candidates:
+        compact = re.sub(r"\s+", "", candidate)
+        match = email_pattern.search(compact)
+        if match:
+            return match.group(0)
+    return ""
+
+
 def _try_mcp(query: str) -> str | None:
     """
     Parse the voice/text query for MCP intent.
     Returns a spoken response string, or None if no MCP tool matched.
     """
+    import re
     q = normalize_user_query(query)
+    q = _normalize_mail_command_phrase(q)
 
     gender = _detect_voice_gender_switch(q)
     language = _detect_language_switch(q)
@@ -2116,6 +2184,7 @@ def _try_mcp(query: str) -> str | None:
         item = (
             item.replace("newyark", "new york")
             .replace("newyork", "new york")
+            .replace("nagram", "nagaram")
             .strip()
         )
         if not item:
@@ -2262,10 +2331,9 @@ def _try_mcp(query: str) -> str | None:
         or "send a mail" in q
         or "send mail" in q
         or "mail to" in q
+        or "email to" in q
     ):
-        import re
-        email_match = re.search(r"[\w\.-]+@[\w\.-]+", q)
-        to_email = email_match.group(0) if email_match else ""
+        to_email = _extract_voice_email_address(q)
         if not to_email:
             contacts_path = Path(BASE_DIR) / "AI_logic_app" / "data" / "contacts.json"
             try:
@@ -2322,20 +2390,13 @@ def _try_mcp(query: str) -> str | None:
     if (
         "send email" in q
         or "send gmail" in q
+        or "send mail" in q
         or "mail to" in q
+        or "email to" in q
     ):
-
-        import re
-
-        email_match = re.search(
-            r'[\w\.-]+@[\w\.-]+',
-            q
-        )
-
-        if not email_match:
+        to_email = _extract_voice_email_address(q)
+        if not to_email:
             return "No email address found"
-
-        to_email = email_match.group(0)
 
         result = mcp.run(
             "gmail",

@@ -135,6 +135,15 @@ class AppLauncherTool(MCPTool):
         "Launch installed apps, websites, files and folders dynamically."
     )
 
+    @staticmethod
+    def _browser_action(url: str, label: str = "Open") -> dict:
+        return {
+            "type": "open_url",
+            "url": url,
+            "label": label,
+            "target": "_blank",
+        }
+
     # -------------------------------------------------------
     # START MENU PATHS
     # -------------------------------------------------------
@@ -210,7 +219,7 @@ class AppLauncherTool(MCPTool):
                 webbrowser.open(url)
 
                 return self._ok(
-                    {"url": url},
+                    {"url": url, "browser_action": self._browser_action(url, "Open URL")},
                     f"Opened URL: {url}"
                 )
 
@@ -311,12 +320,15 @@ class AppLauncherTool(MCPTool):
 
             if target in websites:
 
-                webbrowser.open(
-                    websites[target]
-                )
+                url = websites[target]
+                webbrowser.open(url)
 
                 return self._ok(
-                    {"website": target},
+                    {
+                        "website": target,
+                        "url": url,
+                        "browser_action": self._browser_action(url, f"Open {target}"),
+                    },
                     f"Opened {target}"
                 )
 
@@ -2020,6 +2032,9 @@ class BriefingTool(MCPTool):
 
     @staticmethod
     def _is_google_connection_warning(result: dict) -> bool:
+        data = (result or {}).get("data") or {}
+        if isinstance(data, dict) and data.get("browser_fallback"):
+            return True
         message = str((result or {}).get("message", "")).lower()
         return (
             "not connected on this deployment" in message
@@ -2118,7 +2133,11 @@ class BriefingTool(MCPTool):
             overview_parts.append(f"{len(calendar_events)} calendar event(s)")
         if include_reminders and reminder_result.get("status") == "ok":
             overview_parts.append(f"{len(reminders)} active reminder(s)")
-        if include_gmail and gmail_result.get("status") == "ok":
+        if (
+            include_gmail
+            and gmail_result.get("status") == "ok"
+            and not self._is_google_connection_warning(gmail_result)
+        ):
             overview_parts.append(f"{len(emails)} important Gmail item(s)")
         if weather_data.get("rain_expected"):
             overview_parts.append("rain alert")
@@ -2195,7 +2214,11 @@ class BriefingTool(MCPTool):
             else:
                 sections.append({"title": "Reminders", "text": "No active reminders."})
 
-        if include_gmail and gmail_result.get("status") == "ok":
+        if (
+            include_gmail
+            and gmail_result.get("status") == "ok"
+            and not self._is_google_connection_warning(gmail_result)
+        ):
             if emails:
                 email_subjects = self._brief_list(emails, "subject", 3)
                 sections.append({

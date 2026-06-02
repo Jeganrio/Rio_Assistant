@@ -4,6 +4,7 @@ from google.auth.transport.requests import Request # Added: Import Request for t
 import base64
 from email.mime.text import MIMEText
 import os
+from urllib.parse import quote_plus, urlencode
 
 from AI_logic_app.google_auth import (
     google_not_connected_message,
@@ -41,6 +42,53 @@ class GmailTool:
             "data": None,
             "message": message
         }
+
+    @staticmethod
+    def _is_cloud():
+        return os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}
+
+    @staticmethod
+    def _gmail_compose_url(to="", subject="", body=""):
+        return "https://mail.google.com/mail/?view=cm&fs=1&" + urlencode({
+            "to": to,
+            "su": subject,
+            "body": body,
+        })
+
+    def _compose_fallback(self, to="", subject="", body=""):
+        url = self._gmail_compose_url(to=to, subject=subject, body=body)
+        return self._ok(
+            {
+                "to": to,
+                "subject": subject,
+                "url": url,
+                "browser_fallback": True,
+                "browser_action": {
+                    "type": "open_url",
+                    "url": url,
+                    "label": "Open Gmail compose",
+                    "target": "_blank",
+                },
+            },
+            "Opened Gmail compose draft. Review it and press Send in Gmail."
+        )
+
+    def _search_fallback(self, query="", message="Opened Gmail search in your browser."):
+        url = "https://mail.google.com/mail/u/0/#search/" + quote_plus(query or "")
+        return self._ok(
+            {
+                "query": query,
+                "url": url,
+                "browser_fallback": True,
+                "browser_action": {
+                    "type": "open_url",
+                    "url": url,
+                    "label": "Open Gmail search",
+                    "target": "_blank",
+                },
+            },
+            message
+        )
 
     def _get_authenticated_service(self):
         """
@@ -97,13 +145,16 @@ class GmailTool:
             timeframe=""):
 
         try:
-            # Ensure service is authenticated before proceeding
-            service = self._get_authenticated_service()
-
             # SEND MAIL
             if action == "send":
                 if not to:
                     return self._err("No recipient email address found.")
+                try:
+                    service = self._get_authenticated_service()
+                except Exception as exc:
+                    if self._is_cloud():
+                        return self._compose_fallback(to=to, subject=subject, body=body)
+                    raise exc
 
                 message = MIMEText(body)
 
@@ -171,6 +222,15 @@ class GmailTool:
                     gmail_query_parts.append('newer_than:7d')
 
                 final_gmail_query = " ".join(gmail_query_parts)
+                try:
+                    service = self._get_authenticated_service()
+                except Exception as exc:
+                    if self._is_cloud():
+                        return self._search_fallback(
+                            final_gmail_query,
+                            "Opened Gmail search for interviews, assessments, and meetings. Sign in if Gmail asks."
+                        )
+                    raise exc
                 found = []
 
                 results = service.users().messages().list(
@@ -203,6 +263,15 @@ class GmailTool:
 
             # SEARCH MAIL
             elif action == "search":
+                try:
+                    service = self._get_authenticated_service()
+                except Exception as exc:
+                    if self._is_cloud():
+                        return self._search_fallback(
+                            query,
+                            "Opened Gmail search in your browser. Sign in if Gmail asks."
+                        )
+                    raise exc
 
                 results = service.users().messages().list(
                     userId="me",
