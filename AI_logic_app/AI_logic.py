@@ -2111,6 +2111,7 @@ def _normalize_mail_command_phrase(q: str) -> str:
         " sentamil ": " send mail ",
         " send tamil ": " send mail ",
         " sent mail ": " send mail ",
+        " send the mail ": " send mail ",
         " send a email ": " send email ",
         " send an email ": " send email ",
         " compose mail ": " send mail ",
@@ -2542,8 +2543,11 @@ def _try_mcp(query: str) -> str | None:
         if not to_email:
             return "No email address or saved contact found. Say add contact name email address first."
 
-        subject_match = re.search(r"\bsubject\s+(.+?)(?:\s+body\s+|$)", q)
-        body_match = re.search(r"\bbody\s+(.+)$", q)
+        subject_match = re.search(
+            r"\b(?:subject|title)\s+(.+?)(?:\s+(?:body|content|message)\s+|$)",
+            q,
+        )
+        body_match = re.search(r"\b(?:body|content|message)\s+(.+)$", q)
         subject = subject_match.group(1).strip() if subject_match else "Message from CUBY"
         body = body_match.group(1).strip() if body_match else "Hello from CUBY AI Assistant"
 

@@ -83,11 +83,12 @@
     .robot-backdrop {
       position: fixed;
       inset: 0;
-      z-index: 0;
+      z-index: 1;
       pointer-events: none;
       display: grid;
       place-items: center;
-      opacity: 0.82;
+      opacity: 0.88;
+      overflow: hidden;
     }
 
     .robot-backdrop::before {
@@ -308,34 +309,43 @@
 
     .wave-field {
       position: absolute;
-      inset: 6% 0 18%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      inset: 0;
+      display: block;
+      overflow: hidden;
     }
 
     .wave-stack {
-      width: 22%;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 46%;
+      width: 100vw;
       display: grid;
-      gap: 14px;
-      opacity: 0.54;
+      gap: 18px;
+      opacity: 0.46;
+      transform: translateY(-50%);
     }
 
-    .wave-stack.right { transform: scaleX(-1); }
+    .wave-stack.right {
+      top: 61%;
+      transform: translateY(-50%) scaleX(-1);
+      opacity: 0.34;
+    }
 
     .wave-line {
-      height: 2px;
+      width: 100vw;
+      height: 3px;
       border-radius: 999px;
       background: linear-gradient(90deg, transparent, var(--light-main), transparent);
       box-shadow: 0 0 16px var(--light-main);
       transform-origin: center;
     }
 
-    .wave-line:nth-child(1) { width: 52%; margin-left: 40%; }
-    .wave-line:nth-child(2) { width: 78%; margin-left: 18%; }
-    .wave-line:nth-child(3) { width: 100%; }
-    .wave-line:nth-child(4) { width: 72%; margin-left: 24%; }
-    .wave-line:nth-child(5) { width: 48%; margin-left: 44%; }
+    .wave-line:nth-child(1) { opacity: 0.35; }
+    .wave-line:nth-child(2) { opacity: 0.64; }
+    .wave-line:nth-child(3) { opacity: 0.9; }
+    .wave-line:nth-child(4) { opacity: 0.58; }
+    .wave-line:nth-child(5) { opacity: 0.32; }
 
     body.speaking .robot-head {
       box-shadow:
@@ -519,6 +529,81 @@
       box-shadow: 0 0 18px color-mix(in srgb, var(--light-main), transparent 68%);
     }
 
+    .mail-flow {
+      margin-top: 10px;
+      border: 1px solid color-mix(in srgb, var(--light-main), white 16%);
+      border-radius: 8px;
+      background: rgba(4, 8, 10, 0.76);
+      box-shadow: 0 0 28px color-mix(in srgb, var(--light-main), transparent 72%);
+      backdrop-filter: blur(16px);
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .mail-flow[hidden] { display: none; }
+
+    .mail-flow-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .mail-flow-header button {
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .mail-flow-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .mail-flow-field {
+      min-width: 0;
+      padding: 12px 14px;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .mail-flow-field strong {
+      display: block;
+      margin-bottom: 5px;
+      color: color-mix(in srgb, var(--light-main), white 30%);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .mail-flow-field span {
+      display: block;
+      min-height: 22px;
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .mail-flow-step {
+      padding: 11px 14px 13px;
+      color: color-mix(in srgb, var(--text), var(--muted) 28%);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
     .composer {
       margin-top: 10px;
       display: grid;
@@ -558,7 +643,7 @@
 
     .updates-panel {
       position: absolute;
-      inset: -5% -38% 0;
+      inset: -8% -52% 0;
       z-index: 5;
       pointer-events: none;
     }
@@ -577,28 +662,104 @@
 
     .updates-list li {
       position: absolute;
-      width: clamp(230px, 15vw, 290px);
-      height: clamp(118px, 12vh, 142px);
-      padding: 12px 14px;
+      width: clamp(250px, 17vw, 330px);
+      height: clamp(128px, 12vh, 158px);
+      padding: 14px 16px;
       border: 1px solid rgba(255,255,255,0.10);
       border-radius: 8px;
       background: rgba(5, 8, 10, 0.66);
       backdrop-filter: blur(14px);
       color: var(--text);
-      font-size: clamp(15px, 1vw, 17px);
+      font-size: clamp(16px, 1.05vw, 18px);
       line-height: 1.36;
       overflow-wrap: anywhere;
-      overflow: hidden;
+      overflow: visible;
       box-shadow: 0 0 22px color-mix(in srgb, var(--light-main), transparent 66%);
       animation: updateFloat 2.8s ease-in-out infinite;
+      transition:
+        left 0.72s ease,
+        right 0.72s ease,
+        top 0.72s ease,
+        transform 0.72s ease,
+        opacity 0.72s ease,
+        border-color 0.72s ease,
+        box-shadow 0.72s ease;
     }
 
-    .updates-list li:nth-child(1) { left: 1%; top: 10%; }
-    .updates-list li:nth-child(2) { right: 1%; top: 10%; }
-    .updates-list li:nth-child(3) { left: 1%; top: 43%; }
-    .updates-list li:nth-child(4) { right: 1%; top: 43%; }
-    .updates-list li:nth-child(5) { left: 1%; top: 68%; }
-    .updates-list li:nth-child(6) { right: 1%; top: 68%; }
+    .updates-list li::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 100%;
+      width: clamp(90px, 10vw, 180px);
+      height: 10px;
+      border: 1px solid color-mix(in srgb, var(--light-main), white 12%);
+      border-radius: 999px;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--light-main), transparent 28%), transparent);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--light-main), transparent 42%);
+      opacity: 0.46;
+      transform: translateY(-50%) rotate(-8deg);
+      transform-origin: left center;
+    }
+
+    .updates-list li::after {
+      content: "";
+      position: absolute;
+      top: calc(50% - 9px);
+      left: calc(100% - 1px);
+      width: 24px;
+      height: 18px;
+      border: 1px solid color-mix(in srgb, var(--light-main), white 16%);
+      border-left: 0;
+      border-radius: 0 999px 999px 0;
+      opacity: 0.54;
+    }
+
+    .updates-list li:nth-child(2n)::before {
+      left: auto;
+      right: 100%;
+      background: linear-gradient(270deg, color-mix(in srgb, var(--light-main), transparent 28%), transparent);
+      transform: translateY(-50%) rotate(8deg);
+      transform-origin: right center;
+    }
+
+    .updates-list li:nth-child(2n)::after {
+      left: auto;
+      right: calc(100% - 1px);
+      border-left: 1px solid color-mix(in srgb, var(--light-main), white 16%);
+      border-right: 0;
+      border-radius: 999px 0 0 999px;
+    }
+
+    .updates-list li:nth-child(1) { left: 0; top: 8%; }
+    .updates-list li:nth-child(2) { right: 0; top: 8%; }
+    .updates-list li:nth-child(3) { left: 0; top: 38%; }
+    .updates-list li:nth-child(4) { right: 0; top: 38%; }
+    .updates-list li:nth-child(5) { left: 5%; top: 65%; }
+    .updates-list li:nth-child(6) { right: 5%; top: 65%; }
+
+    .updates-list li.is-active {
+      left: 50% !important;
+      right: auto !important;
+      top: 3% !important;
+      width: min(430px, calc(100vw - 42px));
+      height: auto;
+      min-height: 136px;
+      z-index: 12;
+      opacity: 1;
+      border-color: color-mix(in srgb, var(--light-main), white 36%);
+      box-shadow:
+        0 0 44px color-mix(in srgb, var(--light-main), transparent 36%),
+        inset 0 0 22px rgba(255,255,255,0.05);
+      animation: none;
+      transform: translate(-50%, -4px) scale(1.08);
+    }
+
+    .updates-list li.is-active::before,
+    .updates-list li.is-active::after {
+      opacity: 0.95;
+      animation: presentHand 0.72s ease both;
+    }
 
     .updates-list li:nth-child(2n) {
       animation-delay: 0.3s;
@@ -608,7 +769,7 @@
       display: block;
       margin-bottom: 6px;
       color: color-mix(in srgb, var(--light-main), white 30%);
-      font-size: 12px;
+      font-size: 13px;
       text-transform: uppercase;
     }
 
@@ -619,9 +780,28 @@
       overflow: hidden;
     }
 
+    .updates-list li.is-active span {
+      -webkit-line-clamp: 7;
+    }
+
     @keyframes updateFloat {
       0%, 100% { transform: translateY(0); opacity: 0.76; }
       50% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    @keyframes presentHand {
+      0% { filter: brightness(0.85); }
+      100% { filter: brightness(1.4); }
+    }
+
+    body.briefing-focus .robot-arm.left {
+      transform: rotate(42deg) translate(28px, -42px);
+      opacity: 1;
+    }
+
+    body.briefing-focus .robot-arm.right {
+      transform: rotate(-42deg) scaleX(-1) translate(28px, -42px);
+      opacity: 1;
     }
 
     .status {
@@ -642,26 +822,35 @@
       .caption {
         min-height: 76px;
       }
+      .mail-flow-grid {
+        grid-template-columns: 1fr;
+      }
       .updates-panel {
-        inset: 0 -8% 0;
+        inset: 0 -6% 0;
       }
       .updates-list li {
-        width: min(210px, 43vw);
+        width: min(220px, 42vw);
         height: auto;
-        min-height: 74px;
-        max-height: 126px;
+        min-height: 68px;
+        max-height: 76px;
         padding: 10px 11px;
-        font-size: 14px;
+        font-size: 13.5px;
       }
       .updates-list strong { font-size: 11.5px; }
-      .updates-list span { -webkit-line-clamp: 3; }
-      .updates-list li:nth-child(1) { left: 2%; top: 5%; }
-      .updates-list li:nth-child(2) { right: 2%; top: 5%; }
+      .updates-list span { -webkit-line-clamp: 2; }
+      .updates-list li:nth-child(1) { left: 7%; top: 4%; }
+      .updates-list li:nth-child(2) { right: 7%; top: 4%; }
       .updates-list li:nth-child(3),
       .updates-list li:nth-child(4) { width: min(190px, 40vw); }
-      .updates-list li:nth-child(3) { left: -4%; top: 62%; }
-      .updates-list li:nth-child(4) { right: -4%; top: 62%; }
+      .updates-list li:nth-child(3) { left: 8%; top: 22%; }
+      .updates-list li:nth-child(4) { right: 8%; top: 22%; }
       .updates-list li:nth-child(n+5) { display: none; }
+      .updates-list li.is-active {
+        top: 5% !important;
+        width: min(330px, calc(100vw - 32px));
+        max-height: none;
+      }
+      .updates-list li.is-active span { -webkit-line-clamp: 7; }
       .robot-arm {
         opacity: 0.38;
       }
@@ -744,6 +933,27 @@
     <div class="browser-action" id="browserAction" hidden>
       <a id="browserActionLink" href="#" target="_blank" rel="noopener noreferrer">Open in new tab</a>
     </div>
+    <div class="mail-flow" id="mailFlow" hidden aria-live="polite">
+      <div class="mail-flow-header">
+        <span>Gmail Composer</span>
+        <button id="mailCancelButton" type="button">Cancel</button>
+      </div>
+      <div class="mail-flow-grid">
+        <div class="mail-flow-field">
+          <strong>To</strong>
+          <span id="mailTo">Waiting for recipient</span>
+        </div>
+        <div class="mail-flow-field">
+          <strong>Subject</strong>
+          <span id="mailSubject">Waiting for subject</span>
+        </div>
+        <div class="mail-flow-field">
+          <strong>Content</strong>
+          <span id="mailBody">Waiting for message</span>
+        </div>
+      </div>
+      <div class="mail-flow-step" id="mailStep">Say or type the recipient Gmail address.</div>
+    </div>
     <div class="composer">
       <input id="textInput" placeholder="Type command" autocomplete="off">
       <button id="sendButton" type="button">Send</button>
@@ -760,6 +970,10 @@
     let browserVoices = [];
     let browserNoSpeechCount = 0;
     let browserPausedForSpeech = false;
+    let briefingSections = [];
+    let activeBriefingIndex = -1;
+    let briefingFocusTimer = null;
+    let mailFlowState = null;
     const wakeWords = [
       'cuby', 'cupy', 'cuppy', 'kuby', 'kubi', 'cubie', 'cubi',
       'cubby', 'cubey', 'quby', 'qby', 'cooby', 'coby',
@@ -787,10 +1001,10 @@
       document.body.classList.add(className || 'clear-light');
     }
 
-    function pulseSpeaking() {
+    function pulseSpeaking(duration = 4200) {
       document.body.classList.add('speaking');
       clearTimeout(speakingTimer);
-      speakingTimer = setTimeout(() => document.body.classList.remove('speaking'), 4200);
+      speakingTimer = setTimeout(() => document.body.classList.remove('speaking'), duration);
     }
 
     function moodFromWeather(payload) {
@@ -974,10 +1188,95 @@
       }
     }
 
+    function speakUiPrompt(text) {
+      if (!('speechSynthesis' in window) || !text) {
+        pulseSpeaking();
+        return;
+      }
+      try {
+        const shouldPauseRecognition = browserMicActive && browserRecognition;
+        const resumeRecognition = () => {
+          if (!shouldPauseRecognition) return;
+          browserPausedForSpeech = false;
+          restartBrowserRecognitionSoon(450);
+        };
+        if (shouldPauseRecognition) {
+          browserPausedForSpeech = true;
+          try {
+            browserRecognition.stop();
+          } catch (err) {
+            // Recognition may already be between browser callbacks.
+          }
+        }
+        const utterance = new SpeechSynthesisUtterance(String(text).slice(0, 360));
+        const lang = hasTamilText(text) || browserSpeechLang === 'ta-IN' ? 'ta-IN' : 'en-IN';
+        utterance.lang = lang;
+        utterance.voice = selectBrowserVoice(lang, browserVoiceGender);
+        utterance.rate = browserVoiceGender === 'male' ? 0.92 : 0.98;
+        utterance.pitch = browserVoiceGender === 'male' ? 0.78 : 1.08;
+        utterance.onend = resumeRecognition;
+        utterance.onerror = resumeRecognition;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+        pulseSpeaking(Math.min(7200, Math.max(2600, String(text).length * 42)));
+        window.setTimeout(resumeRecognition, Math.min(7200, Math.max(2500, String(text).length * 45)));
+      } catch (err) {
+        browserPausedForSpeech = false;
+        pulseSpeaking();
+      }
+    }
+
     function compactUpdateText(value) {
       const text = String(value || '').replace(/\s+/g, ' ').trim();
       if (text.length <= 118) return text;
       return `${text.slice(0, 115).trim()}...`;
+    }
+
+    function clearBriefingFocus() {
+      activeBriefingIndex = -1;
+      document.body.classList.remove('briefing-focus');
+      document.querySelectorAll('#updatesList li.is-active').forEach(item => item.classList.remove('is-active'));
+      clearTimeout(briefingFocusTimer);
+    }
+
+    function setActiveBriefingCard(index) {
+      const items = Array.from(document.querySelectorAll('#updatesList li'));
+      if (!items.length || index < 0 || index >= items.length) return false;
+      items.forEach(item => item.classList.remove('is-active'));
+      items[index].classList.add('is-active');
+      activeBriefingIndex = index;
+      document.body.classList.add('briefing-focus');
+      clearTimeout(briefingFocusTimer);
+      briefingFocusTimer = setTimeout(() => {
+        if (activeBriefingIndex === index) {
+          clearBriefingFocus();
+        }
+      }, 5600);
+      return true;
+    }
+
+    function normalizeBriefingText(value) {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\u0B80-\u0BFF]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function focusBriefingFromText(text) {
+      if (!briefingSections.length) return false;
+      const value = normalizeBriefingText(text);
+      if (!value || value === 'daily briefing' || value.includes('here is your daily briefing')) return false;
+
+      const directIndex = briefingSections.findIndex(section => {
+        const title = normalizeBriefingText(section.title);
+        return title && (value.startsWith(title) || value.includes(`${title} `));
+      });
+      if (directIndex >= 0) {
+        return setActiveBriefingCard(directIndex);
+      }
+
+      return setActiveBriefingCard((activeBriefingIndex + 1) % briefingSections.length);
     }
 
     function renderDailyUpdates(payload) {
@@ -985,15 +1284,19 @@
       const list = document.getElementById('updatesList');
       const sections = payload && Array.isArray(payload.sections) ? payload.sections : [];
       list.textContent = '';
+      clearBriefingFocus();
 
       if (!sections.length) {
         panel.hidden = true;
         document.body.classList.remove('has-updates');
+        briefingSections = [];
         return;
       }
 
-      sections.slice(0, 6).forEach(section => {
+      briefingSections = sections.slice(0, 6);
+      briefingSections.forEach((section, index) => {
         const item = document.createElement('li');
+        item.dataset.index = String(index);
         const title = document.createElement('strong');
         title.textContent = section.title || 'Update';
         const text = document.createElement('span');
@@ -1023,6 +1326,7 @@
         return;
       }
       if (event.kind === 'assistant') {
+        focusBriefingFromText(event.text);
         showText(event.text, moodFromText(event.text), true);
       }
     }
@@ -1089,9 +1393,215 @@
       }
     }
 
+    function normalizeSpokenEmailAddress(value) {
+      let text = String(value || '').toLowerCase();
+      text = text.replace(/\bg\s*mail\b/g, 'gmail');
+      text = text.replace(/\b(dot|period|full stop)\b/g, '.');
+      text = text.replace(/\s*\.\s*/g, '.');
+      text = text.replace(/\b(underscore|under score)\b/g, '_');
+      text = text.replace(/\b(dash|hyphen|minus)\b/g, '-');
+      text = text.replace(/\b(at|add|ad)\b/g, '@');
+      text = text.replace(/\b(r|are|our)\s+gmail\.com\b/g, '@gmail.com');
+      text = text.replace(/\bgmail\.com\b/g, '@gmail.com');
+      text = text.replace(/@@+/g, '@');
+      const compact = text.replace(/\s+/g, '');
+      const match = compact.match(/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.(?:com|in|org|net|edu|co\.in)/i);
+      return match ? match[0].replace('@@', '@') : '';
+    }
+
+    function cleanMailStepText(value, step) {
+      let text = String(value || '').replace(/\s+/g, ' ').trim();
+      if (step === 'subject') {
+        text = text.replace(/^(subject|title|mail title|email title)\s*(is|:)?\s*/i, '');
+      } else if (step === 'body') {
+        text = text.replace(/^(body|content|message|mail body|email body)\s*(is|:)?\s*/i, '');
+      }
+      return text.trim();
+    }
+
+    function extractMailPieces(command) {
+      const value = String(command || '').replace(/\s+/g, ' ').trim();
+      const subjectMatch = value.match(/\b(?:subject|title)\s+(.+?)(?:\s+(?:body|content|message)\s+|$)/i);
+      const bodyMatch = value.match(/\b(?:body|content|message)\s+(.+)$/i);
+      return {
+        to: normalizeSpokenEmailAddress(value),
+        subject: subjectMatch ? cleanMailStepText(subjectMatch[1], 'subject') : '',
+        body: bodyMatch ? cleanMailStepText(bodyMatch[1], 'body') : ''
+      };
+    }
+
+    function isMailComposeRequest(command) {
+      const value = String(command || '').toLowerCase();
+      return (
+        /\b(send|compose|write)\b/.test(value) &&
+        /\b(gmail|mail|email)\b/.test(value)
+      ) || /\b(mail|email)\s+to\b/.test(value);
+    }
+
+    function updateMailFlowUi(stepText = '') {
+      const panel = document.getElementById('mailFlow');
+      const input = document.getElementById('textInput');
+      const sendButton = document.getElementById('sendButton');
+      if (!mailFlowState) {
+        panel.hidden = true;
+        input.placeholder = 'Type command';
+        sendButton.textContent = 'Send';
+        return;
+      }
+      panel.hidden = false;
+      document.getElementById('mailTo').textContent = mailFlowState.to || 'Waiting for recipient';
+      document.getElementById('mailSubject').textContent = mailFlowState.subject || 'Waiting for subject';
+      document.getElementById('mailBody').textContent = mailFlowState.body || 'Waiting for message';
+      document.getElementById('mailStep').textContent = stepText || mailFlowState.prompt || '';
+      if (mailFlowState.step === 'to') {
+        input.placeholder = 'Recipient Gmail address';
+      } else if (mailFlowState.step === 'subject') {
+        input.placeholder = 'Mail subject';
+      } else if (mailFlowState.step === 'body') {
+        input.placeholder = 'Mail content';
+      } else {
+        input.placeholder = 'Type command';
+      }
+      sendButton.textContent = mailFlowState.step === 'sending' ? 'Sending' : 'Next';
+    }
+
+    function promptMailFlow(message) {
+      if (!mailFlowState) return;
+      mailFlowState.prompt = message;
+      updateMailFlowUi(message);
+      showText(message, 'clear-light', true);
+      speakUiPrompt(message);
+    }
+
+    function cancelMailFlow(message = 'Gmail composer cancelled.') {
+      mailFlowState = null;
+      updateMailFlowUi();
+      showText(message, 'clear-light', true);
+      speakUiPrompt(message);
+    }
+
+    function nextMailPrompt() {
+      if (!mailFlowState.to) {
+        mailFlowState.step = 'to';
+        promptMailFlow('Who should I send this Gmail to? Say or type the full Gmail address.');
+        return;
+      }
+      if (!mailFlowState.subject) {
+        mailFlowState.step = 'subject';
+        promptMailFlow('What is the subject for this Gmail?');
+        return;
+      }
+      if (!mailFlowState.body) {
+        mailFlowState.step = 'body';
+        promptMailFlow('What content should I send in the Gmail?');
+        return;
+      }
+      submitMailFlow();
+    }
+
+    function startMailFlow(command) {
+      const pieces = extractMailPieces(command);
+      mailFlowState = {
+        step: 'to',
+        to: pieces.to || '',
+        subject: pieces.subject || '',
+        body: pieces.body || '',
+        prompt: ''
+      };
+      updateMailFlowUi();
+      nextMailPrompt();
+    }
+
+    async function submitMailFlow() {
+      if (!mailFlowState || !mailFlowState.to || !mailFlowState.subject || !mailFlowState.body) {
+        nextMailPrompt();
+        return;
+      }
+      const command = `send mail to ${mailFlowState.to} subject ${mailFlowState.subject} body ${mailFlowState.body}`;
+      mailFlowState.step = 'sending';
+      updateMailFlowUi('Sending Gmail now...');
+      showText('Sending Gmail now...', 'clear-light', true);
+      try {
+        const res = await fetch('/api/ai/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command })
+        });
+        const data = await res.json();
+        const response = assistantResponseFromApi(data, command);
+        const browserAction = data && data.data ? data.data.browser_action : null;
+        mailFlowState.step = 'sent';
+        updateMailFlowUi(response);
+        showText(response, moodFromText(response), true);
+        updateBrowserLanguageFromText(response);
+        updateBrowserVoiceGenderFromText(response);
+        speakInBrowser(response);
+        performBrowserAction(browserAction);
+        setTimeout(() => {
+          mailFlowState = null;
+          updateMailFlowUi();
+        }, 5200);
+        setTimeout(pollEvents, 250);
+      } catch (err) {
+        promptMailFlow('Gmail sending failed. Please check Gmail connection and try again.');
+      }
+    }
+
+    function handleMailFlowCommand(command) {
+      if (!mailFlowState) return false;
+      showText(command, 'user-light', false);
+      const value = String(command || '').trim();
+      if (/^(cancel|cancel mail|stop mail|discard)$/i.test(value)) {
+        cancelMailFlow();
+        return true;
+      }
+      if (mailFlowState.step === 'to') {
+        const email = normalizeSpokenEmailAddress(value);
+        if (!email) {
+          promptMailFlow('I could not read the Gmail address. Please say it like name at gmail dot com.');
+          return true;
+        }
+        mailFlowState.to = email;
+      } else if (mailFlowState.step === 'subject') {
+        const subject = cleanMailStepText(value, 'subject');
+        if (!subject) {
+          promptMailFlow('Please say the Gmail subject.');
+          return true;
+        }
+        mailFlowState.subject = subject;
+      } else if (mailFlowState.step === 'body') {
+        const body = cleanMailStepText(value, 'body');
+        if (!body) {
+          promptMailFlow('Please say the Gmail content.');
+          return true;
+        }
+        mailFlowState.body = body;
+      }
+      updateMailFlowUi();
+      nextMailPrompt();
+      return true;
+    }
+
     async function sendCommand(command, options = {}) {
       command = normalizeLiveCommand(command);
       if (!command) return;
+      if (!options.skipMailFlow && handleMailFlowCommand(command)) {
+        if (!options.keepInput) {
+          document.getElementById('textInput').value = '';
+        }
+        return;
+      }
+      if (!options.skipMailFlow && isMailComposeRequest(command)) {
+        const pieces = extractMailPieces(command);
+        if (!(pieces.to && pieces.subject && pieces.body)) {
+          showText(command, 'user-light', false);
+          startMailFlow(command);
+          if (!options.keepInput) {
+            document.getElementById('textInput').value = '';
+          }
+          return;
+        }
+      }
       showText(command, 'user-light', false);
       updateBrowserLanguageFromText(command);
       updateBrowserVoiceGenderFromText(command);
@@ -1228,6 +1738,7 @@
     }
 
     document.getElementById('sendButton').addEventListener('click', window.sendTypedCommand);
+    document.getElementById('mailCancelButton').addEventListener('click', () => cancelMailFlow());
     document.getElementById('textInput').addEventListener('keydown', event => {
       if (event.key === 'Enter') {
         event.preventDefault();
