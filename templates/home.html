@@ -495,6 +495,30 @@
       overflow-wrap: anywhere;
     }
 
+    .browser-action {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .browser-action[hidden] { display: none; }
+
+    .browser-action a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid color-mix(in srgb, var(--light-main), white 18%);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--light-main), transparent 72%);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 0 18px color-mix(in srgb, var(--light-main), transparent 68%);
+    }
+
     .composer {
       margin-top: 10px;
       display: grid;
@@ -717,6 +741,9 @@
 
   <section class="bottom-bar">
     <div class="caption" id="responseArea">Ready.</div>
+    <div class="browser-action" id="browserAction" hidden>
+      <a id="browserActionLink" href="#" target="_blank" rel="noopener noreferrer">Open in new tab</a>
+    </div>
     <div class="composer">
       <input id="textInput" placeholder="Type command" autocomplete="off">
       <button id="sendButton" type="button">Send</button>
@@ -785,6 +812,7 @@
     function showText(text, mood, speaking) {
       const responseArea = document.getElementById('responseArea');
       responseArea.textContent = text || 'Ready.';
+      hideBrowserActionPrompt();
       setMood(mood || moodFromText(text));
       if (speaking) pulseSpeaking();
     }
@@ -1027,19 +1055,38 @@
       return message || 'No response';
     }
 
+    function hideBrowserActionPrompt() {
+      const actionBox = document.getElementById('browserAction');
+      const actionLink = document.getElementById('browserActionLink');
+      if (!actionBox || !actionLink) return;
+      actionBox.hidden = true;
+      actionLink.removeAttribute('href');
+      actionLink.textContent = 'Open in new tab';
+    }
+
+    function showBrowserActionPrompt(action) {
+      const actionBox = document.getElementById('browserAction');
+      const actionLink = document.getElementById('browserActionLink');
+      if (!actionBox || !actionLink || !action || !action.url) return;
+      actionLink.href = action.url;
+      actionLink.target = action.target || '_blank';
+      actionLink.rel = 'noopener noreferrer';
+      actionLink.textContent = action.label || 'Open in new tab';
+      actionBox.hidden = false;
+    }
+
     function performBrowserAction(action) {
       if (!action || action.type !== 'open_url' || !action.url) return;
-      window.setTimeout(() => {
-        let opened = null;
-        try {
-          opened = window.open(action.url, action.target || '_blank', 'noopener');
-        } catch (err) {
-          opened = null;
-        }
-        if (!opened) {
-          window.location.href = action.url;
-        }
-      }, 180);
+      let opened = null;
+      try {
+        opened = window.open(action.url, action.target || '_blank');
+        if (opened) opened.opener = null;
+      } catch (err) {
+        opened = null;
+      }
+      if (!opened) {
+        showBrowserActionPrompt(action);
+      }
     }
 
     async function sendCommand(command, options = {}) {
