@@ -30,6 +30,7 @@ import threading
 import tempfile
 import ctypes
 import asyncio
+import audioop
 
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
@@ -112,14 +113,16 @@ except Exception:
 RUNNING = False
 BASE_DIR = app_settings.BASE_DIR
 inp_lang = "en-in"
-VOICE_LISTEN_TIMEOUT = 12
-VOICE_PHRASE_TIME_LIMIT = 14
+VOICE_LISTEN_TIMEOUT = 7
+VOICE_PHRASE_TIME_LIMIT = 12
 VOICE_RECOGNITION_TIMEOUT = 10
 VOICE_AFTER_SPEAK_PAUSE = 1.0
 VOICE_RECALIBRATE_AFTER = 3
-VOICE_ENERGY_MIN = 80
-VOICE_ENERGY_MAX = 900
-VOICE_ENERGY_SCALE = 0.72
+VOICE_ENERGY_MIN = 140
+VOICE_ENERGY_MAX = 1200
+VOICE_ENERGY_SCALE = 1.05
+VOICE_PREROLL_SECONDS = 0.35
+VOICE_AMBIENT_SAMPLES = 8
 
 _VOICE_RECOGNIZER = None
 _VOICE_LOCK = threading.Lock()
@@ -911,15 +914,22 @@ def _get_voice_recognizer():
     global _VOICE_RECOGNIZER
     if _VOICE_RECOGNIZER is None:
         _VOICE_RECOGNIZER = sr.Recognizer()
-        _VOICE_RECOGNIZER.pause_threshold = 1.05
+        _VOICE_RECOGNIZER.pause_threshold = 0.9
         _VOICE_RECOGNIZER.phrase_threshold = 0.18
-        _VOICE_RECOGNIZER.non_speaking_duration = 0.55
-        _VOICE_RECOGNIZER.dynamic_energy_threshold = True
+        _VOICE_RECOGNIZER.non_speaking_duration = 0.45
+        _VOICE_RECOGNIZER.dynamic_energy_threshold = False
         _VOICE_RECOGNIZER.dynamic_energy_adjustment_damping = 0.12
         _VOICE_RECOGNIZER.dynamic_energy_ratio = 1.18
-        _VOICE_RECOGNIZER.energy_threshold = 220
+        _VOICE_RECOGNIZER.energy_threshold = 260
         _VOICE_RECOGNIZER.operation_timeout = VOICE_RECOGNITION_TIMEOUT
     return _VOICE_RECOGNIZER
+
+
+def _clamp_voice_threshold(recognizer) -> None:
+    recognizer.energy_threshold = max(
+        VOICE_ENERGY_MIN,
+        min(VOICE_ENERGY_MAX, recognizer.energy_threshold),
+    )
 
 
 def _reset_voice_recognizer():
@@ -935,10 +945,8 @@ def _calibrate_microphone(recognizer, duration: float = 1.0) -> None:
             print("calibrating microphone...")
             recognizer.adjust_for_ambient_noise(source, duration=duration)
             calibrated = recognizer.energy_threshold * VOICE_ENERGY_SCALE
-            recognizer.energy_threshold = max(
-                VOICE_ENERGY_MIN,
-                min(VOICE_ENERGY_MAX, calibrated)
-            )
+            recognizer.energy_threshold = calibrated
+            _clamp_voice_threshold(recognizer)
             print(f"microphone energy threshold: {recognizer.energy_threshold:.0f}")
     except Exception as exc:
         print(f"Microphone calibration skipped: {exc}")
@@ -955,18 +963,24 @@ def _voice_recognition_languages() -> list[str]:
     return unique
 
 
-def _pick_transcript(response) -> str:
+def _pick_transcript(response) -> tuple[str, float]:
     if not response:
-        return ""
+        return "", 0.0
     alternatives = response.get("alternative", []) if isinstance(response, dict) else []
     if not alternatives:
-        return ""
+        return "", 0.0
     best = max(alternatives, key=lambda item: item.get("confidence", 0.0))
-    return str(best.get("transcript", "")).strip()
+    transcript = str(best.get("transcript", "")).strip()
+    confidence = float(best.get("confidence", 0.0) or 0.0)
+    if transcript and confidence <= 0:
+        confidence = 0.01
+    return transcript, confidence
 
 
 def _recognize_voice_audio(recognizer, audio) -> str:
     last_error = None
+    best_transcript = ""
+    best_confidence = 0.0
     for language in _voice_recognition_languages():
         try:
             response = recognizer.recognize_google(
@@ -974,10 +988,11 @@ def _recognize_voice_audio(recognizer, audio) -> str:
                 language=language,
                 show_all=True,
             )
-            transcript = _pick_transcript(response)
-            if transcript:
-                print(f"recognized with {language}")
-                return transcript.lower()
+            transcript, confidence = _pick_transcript(response)
+            if transcript and confidence >= best_confidence:
+                best_transcript = transcript
+                best_confidence = confidence
+                print(f"recognized candidate with {language} confidence={confidence:.2f}")
         except sr.UnknownValueError as exc:
             last_error = exc
             continue
@@ -986,9 +1001,75 @@ def _recognize_voice_audio(recognizer, audio) -> str:
         except Exception as exc:
             last_error = exc
             continue
+    if best_transcript:
+        print(f"recognized best confidence={best_confidence:.2f}")
+        return best_transcript.lower()
     if last_error:
         raise last_error
     raise sr.UnknownValueError()
+
+
+def _capture_voice_audio(recognizer, source, seconds: int) -> sr.AudioData:
+    timeout_seconds = max(2.0, min(float(seconds), float(VOICE_LISTEN_TIMEOUT)))
+    phrase_limit = max(3.0, min(float(seconds), float(VOICE_PHRASE_TIME_LIMIT)))
+    threshold = int(recognizer.energy_threshold)
+    chunk = source.CHUNK
+    sample_width = source.SAMPLE_WIDTH
+    sample_rate = source.SAMPLE_RATE
+    phrase_threshold = max(0.15, float(recognizer.phrase_threshold))
+    pause_threshold = max(0.45, float(recognizer.pause_threshold))
+    preroll_limit = max(1, int(sample_rate / chunk * VOICE_PREROLL_SECONDS))
+    ambient = []
+    preroll = []
+    frames = []
+    started = False
+    speech_started_at = 0.0
+    last_loud_at = 0.0
+    start = time.monotonic()
+    wait_deadline = start + timeout_seconds
+
+    while True:
+        now = time.monotonic()
+        if not started and now >= wait_deadline:
+            if ambient:
+                ambient_peak = max(ambient)
+                recognizer.energy_threshold = max(
+                    VOICE_ENERGY_MIN,
+                    min(VOICE_ENERGY_MAX, max(threshold, ambient_peak * 2.2)),
+                )
+            raise sr.WaitTimeoutError("listening timed out while waiting for phrase to start")
+        if started and now - speech_started_at >= phrase_limit:
+            break
+
+        buffer = source.stream.read(chunk)
+        if not buffer:
+            continue
+        rms = audioop.rms(buffer, sample_width)
+
+        if not started:
+            ambient.append(rms)
+            if len(ambient) > VOICE_AMBIENT_SAMPLES:
+                ambient.pop(0)
+            preroll.append(buffer)
+            if len(preroll) > preroll_limit:
+                preroll.pop(0)
+            if rms > threshold:
+                started = True
+                speech_started_at = now
+                last_loud_at = now
+                frames.extend(preroll)
+                frames.append(buffer)
+            continue
+
+        frames.append(buffer)
+        if rms > threshold * 0.72:
+            last_loud_at = now
+        elif now - speech_started_at >= phrase_threshold and now - last_loud_at >= pause_threshold:
+            break
+
+    if not frames:
+        raise sr.WaitTimeoutError("no audio captured")
+    return sr.AudioData(b"".join(frames), sample_rate, sample_width)
 
 
 def takecommandexceptional(seconds: int = 5) -> str:
@@ -1002,6 +1083,7 @@ def takecommandexceptional(seconds: int = 5) -> str:
             recognizer = _reset_voice_recognizer()
             _calibrate_microphone(recognizer)
             _VOICE_MISSES = 0
+        _clamp_voice_threshold(recognizer)
 
         since_speech = time.monotonic() - _LAST_SPOKE_AT
         if since_speech < VOICE_AFTER_SPEAK_PAUSE:
@@ -1010,11 +1092,7 @@ def takecommandexceptional(seconds: int = 5) -> str:
         try:
             with sr.Microphone() as source:
                 print(f"listening... threshold={recognizer.energy_threshold:.0f}")
-                audio = recognizer.listen(
-                    source,
-                    timeout=min(seconds, VOICE_LISTEN_TIMEOUT),
-                    phrase_time_limit=min(seconds, VOICE_PHRASE_TIME_LIMIT)
-                )
+                audio = _capture_voice_audio(recognizer, source, seconds)
             query = _recognize_voice_audio(recognizer, audio)
 
             aliases = [
@@ -1039,18 +1117,14 @@ def takecommandexceptional(seconds: int = 5) -> str:
             return query
         except sr.WaitTimeoutError:
             _VOICE_MISSES += 1
-            if recognizer.energy_threshold > VOICE_ENERGY_MIN:
-                recognizer.energy_threshold = max(
-                    VOICE_ENERGY_MIN,
-                    recognizer.energy_threshold * 0.82,
-                )
+            _clamp_voice_threshold(recognizer)
             print("No speech detected.")
             return ""
         except sr.UnknownValueError:
             _VOICE_MISSES += 1
-            recognizer.energy_threshold = max(
-                VOICE_ENERGY_MIN,
-                recognizer.energy_threshold * 0.9,
+            recognizer.energy_threshold = min(
+                VOICE_ENERGY_MAX,
+                max(VOICE_ENERGY_MIN, recognizer.energy_threshold * 1.08),
             )
             print("Could not understand audio.")
             return ""
@@ -2961,7 +3035,12 @@ def main() -> None:
     search_obj = GenAI()
 
     while RUNNING:
-        query = takecommandexceptional(20).lower()
+        try:
+            query = takecommandexceptional(20).lower()
+        except Exception as exc:
+            print(f"CUBY listening error: {exc}")
+            speak("Voice listening had a problem, but I am still active.")
+            continue
         if not query:
             continue
 

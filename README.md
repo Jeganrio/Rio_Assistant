@@ -76,8 +76,10 @@ The setup file is created at:
 dist\CUBY_Assistant_Setup.exe
 ```
 
-Double-click `CUBY_Assistant_Setup.exe` to install the Desktop and Start Menu
-shortcuts for this local CUBY project.
+Double-click `CUBY_Assistant_Setup.exe` to install or upgrade this local CUBY
+project. It refreshes the Desktop and Start Menu shortcuts, installs current
+requirements, and initializes the local database. For shortcut-only testing,
+run `dist\CUBY_Assistant_Setup.exe --no-deps`.
 
 ## Project Structure
 

@@ -75,7 +75,7 @@ def main() -> int:
             print(f"Installer script found: {script}")
             return 0
 
-        no_deps = "--install-deps" not in sys.argv
+        no_deps = "--no-deps" in sys.argv
         exit_code = _run_powershell(script, project_root, no_deps=no_deps)
         if exit_code != 0:
             _message(
@@ -88,7 +88,7 @@ def main() -> int:
 
         _message(
             APP_NAME,
-            "CUBY Assistant installed successfully.\n\n"
+            "CUBY Assistant installed or upgraded successfully.\n\n"
             "Open it from the Desktop or Start Menu shortcut.",
         )
         return 0
