@@ -126,6 +126,9 @@ async def execute_command(request: CommandRequest,
     """
     try:
         command = AI_logic.normalize_user_query(request.command)
+        stripped_command = getattr(AI_logic, "_strip_wake_prefix", lambda value: value)(command)
+        if stripped_command != command:
+            command = stripped_command
 
         if getattr(AI_logic, "_is_wake_command", lambda _cmd: False)(command):
             language = getattr(AI_logic, "get_assistant_language", lambda: "english")()

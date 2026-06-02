@@ -798,22 +798,38 @@ def normalize_user_query(query: str) -> str:
     return _translate_remaining_tamil_query(normalized)
 
 
-def _is_wake_command(command: str) -> bool:
-    command = _normalize_local_language_query(command.lower())
-    wake_aliases = (
+def _wake_aliases() -> tuple[str, ...]:
+    return (
         "hey cuby", "hi cuby", "ok cuby", "hello cuby",
         "hey cupy", "hi cupy", "ok cupy", "hello cupy",
         "hey cuppy", "hey kuby", "hey cubie", "hey cubi",
+        "hey cubby", "hi cubby", "ok cubby", "hello cubby",
+        "hey copy", "hi copy", "ok copy", "hello copy",
+        "hey cubey", "hey quby", "hey qby", "hey cooby", "hey coby",
         "cuby", "cupy", "cuppy", "kuby", "cubie", "cubi",
+        "cubby", "cubey", "quby", "qby", "cooby", "coby",
     )
+
+
+def _strip_wake_prefix(command: str) -> str:
+    command = _normalize_local_language_query(str(command).lower().strip())
+    for alias in sorted(_wake_aliases(), key=len, reverse=True):
+        match = re.match(rf"^\s*{re.escape(alias)}[\s,.:;\-]+(.+)$", command)
+        if match:
+            return match.group(1).strip()
+    return command
+
+
+def _is_wake_command(command: str) -> bool:
+    command = _normalize_local_language_query(command.lower()).strip()
     tamil_wake_names = (
         "கியூபி", "கியுபி", "க்யூபி", "குபி", "கூபி", "கோபி"
     )
     return (
-        any(re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", command) for alias in wake_aliases)
-        or "wake" in command
-        or "வணக்கம்" in command
-        or ("ஹே" in command and any(name in command for name in tamil_wake_names))
+        command in _wake_aliases()
+        or command in {"wake", "wake up"}
+        or command == "வணக்கம்"
+        or (command.startswith("ஹே") and any(name in command for name in tamil_wake_names))
     )
 
 # ── DB ─────────────────────────────────────────────────────────────────────
@@ -989,7 +1005,9 @@ def takecommandexceptional(seconds: int = 5) -> str:
                 "qb", "cubi", "cubie", "kibi", "kooby", "cooby",
                 "koobie", "cubye", "cuban", "kirban", "hey google",
                 "killbe", "killby", "cubic", "cubyc", "hey cupy",
-                "hey cuppy", "hey kuby", "cupy", "cuppy", "kuby",
+                "hey cuppy", "hey kuby", "hey cubby", "hey copy",
+                "hi copy", "ok copy", "hello copy", "hey cubey",
+                "hey quby", "hey qby", "cupy", "cuppy", "kuby", "cubby", "cubey", "quby", "qby",
             ]
             for alias in aliases:
                 if alias in query:
