@@ -80,6 +80,7 @@ async def status():
             "running":         getattr(AI_logic, "RUNNING", False),
             "voice_available": getattr(AI_logic, "VOICE_AVAILABLE", False),
             "speech_language": getattr(AI_logic, "get_assistant_language", lambda: "english")(),
+            "voice_gender":    getattr(AI_logic, "_load_voice_gender", lambda: "female")(),
         },
     }
 
@@ -125,6 +126,19 @@ async def execute_command(request: CommandRequest,
     """
     try:
         command = AI_logic.normalize_user_query(request.command)
+
+        if getattr(AI_logic, "_is_wake_command", lambda _cmd: False)(command):
+            language = getattr(AI_logic, "get_assistant_language", lambda: "english")()
+            if language == "tamil" or any("\u0B80" <= char <= "\u0BFF" for char in command):
+                response = "வணக்கம்! நான் தயார். எப்படி உதவ வேண்டும்?"
+            else:
+                response = "Hi, welcome back! How can I assist you today?"
+            AI_logic.speak(response)
+            return {
+                "status": "success",
+                "message": "Wake command processed",
+                "data": {"command": "wake", "response": response},
+            }
 
         # ── MCP dispatch first ──────────────────────────────────────────
         mcp_resp = AI_logic._try_mcp(command)

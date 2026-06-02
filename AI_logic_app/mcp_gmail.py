@@ -52,7 +52,12 @@ class GmailTool:
         self.creds = load_authorized_credentials(
             token_path,
             SCOPES,
-            ("GOOGLE_GMAIL_TOKEN_JSON", "GOOGLE_TOKEN_JSON"),
+            (
+                "GOOGLE_GMAIL_TOKEN_JSON",
+                "GOOGLE_GMAIL_TOKEN_B64",
+                "GOOGLE_TOKEN_JSON",
+                "GOOGLE_TOKEN_B64",
+            ),
         )
 
         if self.creds and not self.creds.has_scopes(SCOPES):

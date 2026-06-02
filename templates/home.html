@@ -729,6 +729,9 @@
     let browserRecognition = null;
     let browserMicActive = false;
     let browserSpeechLang = localStorage.getItem('cubySpeechLang') || 'en-IN';
+    let browserVoiceGender = localStorage.getItem('cubyVoiceGender') || 'female';
+    let browserVoices = [];
+    let browserNoSpeechCount = 0;
 
     function toggleMenu() {
       document.getElementById('optionsMenu').classList.toggle('show');
@@ -788,23 +791,97 @@
       return /[\u0B80-\u0BFF]/.test(String(text || ''));
     }
 
+    function loadBrowserVoices() {
+      if (!('speechSynthesis' in window)) return [];
+      browserVoices = window.speechSynthesis.getVoices() || [];
+      return browserVoices;
+    }
+
+    function restartRecognitionForLanguage() {
+      if (!browserMicActive || !browserRecognition) return;
+      try {
+        browserRecognition.stop();
+      } catch (err) {
+        // The onend handler will rebuild listening when the browser allows it.
+      }
+    }
+
+    function normalizeLiveCommand(command) {
+      let value = String(command || '').replace(/\s+/g, ' ').trim();
+      const lower = value.toLowerCase();
+      if (/^(hey|hi|ok|okay|hello)?\s*(cuby|cupy|cuppy|kuby|cubie|cubi)\s*$/.test(lower)) {
+        return 'hey cuby';
+      }
+      value = value.replace(/\b(hey|hi|ok|okay|hello)\s+(cupy|cuppy|kuby|cubie|cubi)\b/ig, 'hey cuby');
+      value = value.replace(/\bmail voice\b/ig, 'male voice');
+      value = value.replace(/\bmain voice\b/ig, 'male voice');
+      value = value.replace(/\bp ?mail voice\b/ig, 'female voice');
+      return value;
+    }
+
     function updateBrowserLanguageFromText(text) {
       const value = String(text || '').toLowerCase();
-      if (value.includes('switch to tamil') || value.includes('tamil language') || hasTamilText(text)) {
+      const previousLang = browserSpeechLang;
+      if (
+        value.includes('switch to tamil') ||
+        value.includes('switch tamil') ||
+        value.includes('speak tamil') ||
+        value.includes('tamil language') ||
+        value.includes('தமிழ்') ||
+        hasTamilText(text)
+      ) {
         browserSpeechLang = 'ta-IN';
-      } else if (value.includes('switch to english') || value.includes('english language')) {
+      } else if (
+        value.includes('switch to english') ||
+        value.includes('switch english') ||
+        value.includes('speak english') ||
+        value.includes('english language') ||
+        value.includes('ஆங்கில') ||
+        value.includes('இங்கிலீஷ்') ||
+        value.includes('இங்கிலிஷ்')
+      ) {
         browserSpeechLang = 'en-IN';
       }
       localStorage.setItem('cubySpeechLang', browserSpeechLang);
+      if (previousLang !== browserSpeechLang) restartRecognitionForLanguage();
+    }
+
+    function updateBrowserVoiceGenderFromText(text) {
+      const value = String(text || '').toLowerCase();
+      if (/\bfemale\b/.test(value) || value.includes('பெண்') || value.includes('ஃபீமேல்') || value.includes('பீமேல்')) {
+        browserVoiceGender = 'female';
+      } else if (/\bmale\b/.test(value) || value.includes('ஆண்') || value.includes('மேல் வாய்ஸ்') || value.includes('மேல் குரல்')) {
+        browserVoiceGender = 'male';
+      }
+      localStorage.setItem('cubyVoiceGender', browserVoiceGender);
+    }
+
+    function selectBrowserVoice(lang, gender) {
+      const voices = browserVoices.length ? browserVoices : loadBrowserVoices();
+      if (!voices.length) return null;
+      const langPrefix = String(lang || 'en-IN').split('-')[0].toLowerCase();
+      const candidates = voices.filter(voice => String(voice.lang || '').toLowerCase().startsWith(langPrefix));
+      const pool = candidates.length ? candidates : voices;
+      const maleHints = ['male', 'prabhat', 'valluvar', 'ravi', 'david', 'mark', 'george', 'guy'];
+      const femaleHints = ['female', 'neerja', 'pallavi', 'zira', 'heera', 'aria', 'jenny', 'susan', 'woman'];
+      const hints = gender === 'male' ? maleHints : femaleHints;
+      return (
+        pool.find(voice => hints.some(hint => `${voice.name} ${voice.voiceURI}`.toLowerCase().includes(hint))) ||
+        pool.find(voice => String(voice.lang || '').toLowerCase() === String(lang || '').toLowerCase()) ||
+        pool[0] ||
+        null
+      );
     }
 
     function speakInBrowser(text) {
       if (!isLiveServer() || !('speechSynthesis' in window) || !text) return;
       try {
         const utterance = new SpeechSynthesisUtterance(String(text).slice(0, 420));
-        utterance.lang = hasTamilText(text) ? 'ta-IN' : browserSpeechLang;
-        utterance.rate = 0.96;
-        utterance.pitch = 1;
+        const lang = hasTamilText(text) || browserSpeechLang === 'ta-IN' ? 'ta-IN' : 'en-IN';
+        utterance.lang = lang;
+        utterance.voice = selectBrowserVoice(lang, browserVoiceGender);
+        utterance.rate = browserVoiceGender === 'male' ? 0.92 : 0.98;
+        utterance.pitch = browserVoiceGender === 'male' ? 0.78 : 1.08;
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utterance);
       } catch (err) {
@@ -872,17 +949,22 @@
         const payload = data.data || {};
         latestSeq = payload.latest_seq || latestSeq;
         (payload.events || []).forEach(handleEvent);
-        document.getElementById('runState').textContent = payload.running ? 'Listening' : 'Standby';
+        if (browserMicActive) {
+          document.getElementById('runState').textContent = browserSpeechLang === 'ta-IN' ? 'Listening Tamil' : 'Listening';
+        } else {
+          document.getElementById('runState').textContent = payload.running ? 'Listening' : 'Standby';
+        }
       } catch (err) {
         document.getElementById('runState').textContent = 'Sync waiting';
       }
     }
 
     async function sendCommand(command, options = {}) {
-      command = String(command || '').trim();
+      command = normalizeLiveCommand(command);
       if (!command) return;
       showText(command, 'user-light', false);
       updateBrowserLanguageFromText(command);
+      updateBrowserVoiceGenderFromText(command);
       try {
         const res = await fetch('/api/ai/command', {
           method: 'POST',
@@ -895,6 +977,7 @@
           : data.message || 'No response';
         showText(response, moodFromText(response), true);
         updateBrowserLanguageFromText(`${command} ${response}`);
+        updateBrowserVoiceGenderFromText(`${command} ${response}`);
         speakInBrowser(response);
         if (!options.keepInput) {
           document.getElementById('textInput').value = '';
@@ -924,7 +1007,7 @@
         browserMicActive = false;
         browserRecognition.stop();
         document.getElementById('runState').textContent = 'Standby';
-        document.getElementById('startButton').textContent = 'START AI';
+        document.getElementById('startButton').textContent = 'START MIC';
         showText('Browser microphone stopped.', 'clear-light', false);
         return;
       }
@@ -937,7 +1020,7 @@
 
       browserRecognition.onstart = () => {
         browserMicActive = true;
-        document.getElementById('runState').textContent = 'Listening';
+        document.getElementById('runState').textContent = browserSpeechLang === 'ta-IN' ? 'Listening Tamil' : 'Listening';
         document.getElementById('startButton').textContent = 'STOP MIC';
         showText('Browser microphone is listening.', 'clear-light', true);
       };
@@ -951,19 +1034,30 @@
         }
         transcript = transcript.trim();
         if (transcript) {
+          browserNoSpeechCount = 0;
           sendCommand(transcript, { fromVoice: true });
         }
       };
 
       browserRecognition.onerror = event => {
         const blocked = ['not-allowed', 'service-not-allowed'].includes(event.error);
+        if (event.error === 'no-speech') {
+          browserNoSpeechCount += 1;
+          if (browserNoSpeechCount >= 2) {
+            browserSpeechLang = browserSpeechLang === 'ta-IN' ? 'en-IN' : 'ta-IN';
+            localStorage.setItem('cubySpeechLang', browserSpeechLang);
+            browserNoSpeechCount = 0;
+          }
+          document.getElementById('runState').textContent = browserSpeechLang === 'ta-IN' ? 'Listening Tamil' : 'Listening';
+          return;
+        }
         const message = blocked
           ? 'Please allow microphone permission in the browser address bar, then press Start AI again.'
           : `Browser microphone error: ${event.error || 'unknown'}`;
         showText(message, 'alert-light', true);
         if (blocked) {
           browserMicActive = false;
-          document.getElementById('startButton').textContent = 'START AI';
+          document.getElementById('startButton').textContent = 'START MIC';
           document.getElementById('runState').textContent = 'Mic blocked';
         }
       };
@@ -976,7 +1070,7 @@
               browserRecognition.start();
             } catch (err) {
               browserMicActive = false;
-              document.getElementById('startButton').textContent = 'START AI';
+              document.getElementById('startButton').textContent = 'START MIC';
               document.getElementById('runState').textContent = 'Standby';
             }
           }, 650);
@@ -1017,6 +1111,10 @@
     setInterval(pollEvents, 1800);
 
     if (isLiveServer()) {
+      loadBrowserVoices();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = loadBrowserVoices;
+      }
       document.getElementById('startButton').textContent = 'START MIC';
     }
   </script>

@@ -22,6 +22,7 @@ import json
 import random
 import sys
 import datetime
+import re
 import time
 import itertools
 import requests
@@ -215,6 +216,8 @@ def set_voice_gender(gender: str) -> str:
         return "Please say male voice or female voice."
     _VOICE_GENDER = gender
     _save_voice_settings(gender=gender)
+    if get_assistant_language() == "tamil":
+        return "ஆண் குரலுக்கு மாறியது." if gender == "male" else "பெண் குரலுக்கு மாறியது."
     return f"Switched to {gender} voice."
 
 
@@ -231,7 +234,7 @@ def set_assistant_language(language: str) -> str:
     inp_lang = "ta-IN" if language == "tamil" else "en-IN"
     _save_voice_settings(language=language)
     if language == "tamil":
-        return "Switched to Tamil language. I will listen and speak in Tamil."
+        return "தமிழ் மொழிக்கு மாறியது. நான் தமிழில் கேட்பேன், பேசுவேன்."
     return "Switched to English language. I will listen and speak in English."
 
 
@@ -797,11 +800,17 @@ def normalize_user_query(query: str) -> str:
 
 def _is_wake_command(command: str) -> bool:
     command = _normalize_local_language_query(command.lower())
+    wake_aliases = (
+        "hey cuby", "hi cuby", "ok cuby", "hello cuby",
+        "hey cupy", "hi cupy", "ok cupy", "hello cupy",
+        "hey cuppy", "hey kuby", "hey cubie", "hey cubi",
+        "cuby", "cupy", "cuppy", "kuby", "cubie", "cubi",
+    )
     tamil_wake_names = (
         "கியூபி", "கியுபி", "க்யூபி", "குபி", "கூபி", "கோபி"
     )
     return (
-        "hey" in command
+        any(re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", command) for alias in wake_aliases)
         or "wake" in command
         or "வணக்கம்" in command
         or ("ஹே" in command and any(name in command for name in tamil_wake_names))
@@ -979,7 +988,8 @@ def takecommandexceptional(seconds: int = 5) -> str:
             aliases = [
                 "qb", "cubi", "cubie", "kibi", "kooby", "cooby",
                 "koobie", "cubye", "cuban", "kirban", "hey google",
-                "killbe", "killby", "cubic", "cubyc",
+                "killbe", "killby", "cubic", "cubyc", "hey cupy",
+                "hey cuppy", "hey kuby", "cupy", "cuppy", "kuby",
             ]
             for alias in aliases:
                 if alias in query:
