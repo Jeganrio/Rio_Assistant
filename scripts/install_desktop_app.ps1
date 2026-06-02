@@ -80,4 +80,4 @@ if (-not $NoStartMenuShortcut) {
 Write-Host ""
 Write-Host "CUBY desktop launcher installed."
 Write-Host "Use the 'CUBY Assistant' shortcut, then press Start AI in the app."
-Write-Host "Voice examples: open Spotify, close Spotify, open VS Code, close Chrome, list apps."
+Write-Host "Voice examples: open Spotify, close Spotify, close all apps, set volume 70 percent, check wifi and bluetooth, search file resume in pc."

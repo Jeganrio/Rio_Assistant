@@ -5,6 +5,7 @@ MCP (Model Context Protocol) inspired tool integrations for CUBY AI Assistant.
 
 Provides:
   - AppLauncherTool      : open/close/list apps, websites, files and folders
+  - DesktopSystemTool    : Windows desktop system controls and status
   - FileSystemTool       : list, read, create, delete files/folders
   - WeatherTool          : current weather + forecast via Open-Meteo (free, no key)
   - NewsTool             : dynamic Google News RSS + optional GNews top headlines
@@ -593,6 +594,472 @@ class AppLauncherTool(MCPTool):
         except Exception as e:
 
             return self._err(str(e))
+
+
+class DesktopSystemTool(MCPTool):
+    """Windows-only desktop system controls for the local EXE app."""
+
+    name = "desktop_system"
+    description = (
+        "Control Windows desktop system actions: close apps, shutdown, restart, "
+        "screenshots, volume, Wi-Fi/Bluetooth status, file search, and running apps."
+    )
+
+    _CLOSE_ALL_PROCESS_NAMES = {
+        name.lower()
+        for names in AppLauncherTool._PROCESS_ALIASES.values()
+        for name in names
+    } | {
+        "acrord32.exe",
+        "applicationframehost.exe",
+        "discord.exe",
+        "firefox.exe",
+        "notepad++.exe",
+        "obs64.exe",
+        "postman.exe",
+        "slack.exe",
+        "vlc.exe",
+        "windowsterminal.exe",
+        "zoom.exe",
+    }
+
+    _PROTECTED_PROCESS_NAMES = {
+        "cmd.exe",
+        "conhost.exe",
+        "csrss.exe",
+        "dwm.exe",
+        "explorer.exe",
+        "lsass.exe",
+        "powershell.exe",
+        "python.exe",
+        "pythonw.exe",
+        "services.exe",
+        "smss.exe",
+        "system",
+        "taskhostw.exe",
+        "uvicorn.exe",
+        "wininit.exe",
+        "winlogon.exe",
+    }
+
+    _SKIP_SEARCH_DIRS = {
+        "$recycle.bin",
+        ".git",
+        "__pycache__",
+        "appdata",
+        "node_modules",
+        "program files",
+        "program files (x86)",
+        "programdata",
+        "windows",
+        "venv",
+    }
+
+    @staticmethod
+    def _is_cloud() -> bool:
+        return os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}
+
+    def _require_desktop(self) -> dict | None:
+        if self._is_cloud():
+            return self._err("Desktop system control is available only in the local Windows app.")
+        if os.name != "nt":
+            return self._err("Desktop system control currently supports Windows only.")
+        return None
+
+    @staticmethod
+    def _browser_action(path: str, label: str = "Open file location") -> dict:
+        return {
+            "type": "open_local_path",
+            "path": path,
+            "label": label,
+        }
+
+    @staticmethod
+    def _open_in_explorer(path: Path) -> None:
+        try:
+            if path.is_file():
+                subprocess.Popen(["explorer", f"/select,{path}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            elif path.exists():
+                os.startfile(str(path))
+        except Exception:
+            pass
+
+    def _close_all_apps(self) -> dict:
+        if err := self._require_desktop():
+            return err
+        try:
+            import psutil
+        except Exception as exc:
+            return self._err(f"Running app control needs psutil. Details: {exc}")
+
+        current_pid = os.getpid()
+        matched = []
+        for proc in psutil.process_iter(["pid", "name"]):
+            try:
+                name = (proc.info.get("name") or "").lower()
+                pid = int(proc.info.get("pid") or 0)
+                if (
+                    not name
+                    or pid == current_pid
+                    or name in self._PROTECTED_PROCESS_NAMES
+                    or name not in self._CLOSE_ALL_PROCESS_NAMES
+                ):
+                    continue
+                matched.append(proc)
+            except (psutil.NoSuchProcess, psutil.AccessDenied, ValueError):
+                continue
+
+        if not matched:
+            return self._ok({"closed": 0, "processes": []}, "No known user apps are running.")
+
+        closed = []
+        blocked = []
+        for proc in matched:
+            try:
+                proc.terminate()
+                closed.append(proc.info.get("name") or str(proc.pid))
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as exc:
+                blocked.append(f"{proc.info.get('name') or proc.pid}: {exc}")
+        _, alive = psutil.wait_procs(matched, timeout=3)
+        for proc in alive:
+            try:
+                proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as exc:
+                blocked.append(f"{proc.info.get('name') or proc.pid}: {exc}")
+
+        unique_closed = sorted(set(closed), key=str.lower)
+        message = f"Closed {len(unique_closed)} known user app process type(s)."
+        if blocked:
+            message += " Some apps could not be closed because Windows denied access."
+        return self._ok(
+            {"closed": len(unique_closed), "processes": unique_closed, "blocked": blocked},
+            message,
+        )
+
+    def _power(self, action: str, delay: int = 30) -> dict:
+        if err := self._require_desktop():
+            return err
+        delay = max(5, min(3600, int(delay or 30)))
+        if action == "cancel_shutdown":
+            subprocess.Popen(["shutdown", "/a"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return self._ok({"action": action}, "Cancelled any pending shutdown or restart.")
+        flag = "/r" if action == "restart" else "/s"
+        subprocess.Popen(["shutdown", flag, "/t", str(delay)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        label = "restart" if action == "restart" else "shutdown"
+        return self._ok(
+            {"action": action, "delay_seconds": delay},
+            f"Windows {label} scheduled in {delay} seconds. Say cancel shutdown to stop it.",
+        )
+
+    def _screenshot(self) -> dict:
+        if err := self._require_desktop():
+            return err
+        try:
+            import pyautogui
+        except Exception as exc:
+            return self._err(f"Screenshot needs PyAutoGUI. Details: {exc}")
+        folder = Path(app_settings.BASE_DIR) / "AI_logic_app" / "data" / "screenshots"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"cuby_screenshot_{datetime.datetime.now():%Y%m%d_%H%M%S}.png"
+        image = pyautogui.screenshot()
+        image.save(path)
+        self._open_in_explorer(path)
+        return self._ok(
+            {"path": str(path), "browser_action": self._browser_action(str(path))},
+            f"Screenshot saved: {path}",
+        )
+
+    @staticmethod
+    def _set_volume_core_audio(percent: int | None = None, mute: bool | None = None) -> tuple[int | None, bool | None]:
+        from ctypes import POINTER, cast
+        from comtypes import CLSCTX_ALL
+        from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
+        devices = AudioUtilities.GetSpeakers()
+        volume = getattr(devices, "EndpointVolume", None)
+        if volume is None:
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            volume = cast(interface, POINTER(IAudioEndpointVolume))
+        if mute is not None:
+            volume.SetMute(1 if mute else 0, None)
+        if percent is not None:
+            volume.SetMasterVolumeLevelScalar(max(0, min(100, percent)) / 100.0, None)
+            volume.SetMute(0, None)
+        current = int(round(volume.GetMasterVolumeLevelScalar() * 100))
+        muted = bool(volume.GetMute())
+        return current, muted
+
+    def _volume(self, percent: int | None = None, mute: bool | None = None, action: str = "status") -> dict:
+        if err := self._require_desktop():
+            return err
+        if action == "full":
+            percent = 100
+            mute = False
+        elif action == "mute":
+            mute = True
+        elif action == "unmute":
+            mute = False
+
+        try:
+            current, muted = self._set_volume_core_audio(percent=percent, mute=mute)
+        except Exception:
+            try:
+                import pyautogui
+                if mute is not None:
+                    pyautogui.press("volumemute")
+                if percent is not None:
+                    pyautogui.press("volumedown", presses=50, interval=0.01)
+                    pyautogui.press("volumeup", presses=max(0, min(50, round(percent / 2))), interval=0.01)
+                current, muted = percent, mute
+            except Exception as exc:
+                return self._err(
+                    "Volume percentage control needs pycaw/comtypes or PyAutoGUI media keys. "
+                    f"Details: {exc}"
+                )
+
+        if action == "volume_status" and current is not None:
+            message = f"Volume is {current} percent" + (" and muted." if muted else ".")
+        elif muted:
+            message = "Volume muted."
+        elif current is not None:
+            message = f"Volume set to {current} percent."
+        else:
+            message = "Volume updated."
+        return self._ok({"volume_percent": current, "muted": muted}, message)
+
+    def _wifi_status(self) -> dict:
+        if err := self._require_desktop():
+            return err
+        try:
+            proc = subprocess.run(
+                ["netsh", "wlan", "show", "interfaces"],
+                capture_output=True,
+                text=True,
+                timeout=8,
+                errors="replace",
+            )
+        except Exception as exc:
+            return self._err(f"Could not check Wi-Fi status: {exc}")
+        if proc.returncode != 0:
+            return self._err((proc.stderr or proc.stdout or "Wi-Fi status unavailable.").strip())
+
+        info = {}
+        for line in proc.stdout.splitlines():
+            if ":" not in line:
+                continue
+            key, value = line.split(":", 1)
+            key = key.strip().lower()
+            value = value.strip()
+            if key in {"state", "ssid", "signal", "profile", "radio type", "authentication"}:
+                info[key.replace(" ", "_")] = value
+
+        connected = info.get("state", "").lower() == "connected"
+        ssid = info.get("ssid", "")
+        if connected and ssid:
+            msg = f"Wi-Fi is connected to {ssid}."
+            if info.get("signal"):
+                msg += f" Signal {info['signal']}."
+        else:
+            msg = "Wi-Fi is not connected."
+        return self._ok({"connected": connected, **info}, msg)
+
+    def _bluetooth_status(self) -> dict:
+        if err := self._require_desktop():
+            return err
+        script = r"""
+$service = Get-Service bthserv -ErrorAction SilentlyContinue
+$devices = @(Get-PnpDevice -Class Bluetooth -ErrorAction SilentlyContinue |
+  Select-Object -First 12 FriendlyName,Status,Problem)
+[pscustomobject]@{
+  serviceStatus = if ($service) { $service.Status.ToString() } else { "Unknown" }
+  devices = $devices
+} | ConvertTo-Json -Depth 4
+"""
+        try:
+            proc = subprocess.run(
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                errors="replace",
+            )
+            data = json.loads(proc.stdout or "{}")
+        except Exception as exc:
+            return self._err(f"Could not check Bluetooth status: {exc}")
+
+        devices = data.get("devices") or []
+        if isinstance(devices, dict):
+            devices = [devices]
+        ok_devices = [
+            d.get("FriendlyName")
+            for d in devices
+            if str(d.get("Status", "")).upper() == "OK" and d.get("FriendlyName")
+        ]
+        service = data.get("serviceStatus", "Unknown")
+        if ok_devices:
+            msg = f"Bluetooth service is {service}. Available Bluetooth device(s): {', '.join(ok_devices[:5])}."
+        else:
+            msg = f"Bluetooth service is {service}. No connected or ready Bluetooth device was found."
+        return self._ok({"service_status": service, "devices": devices, "ok_devices": ok_devices}, msg)
+
+    def _network_status(self, include_wifi: bool = True, include_bluetooth: bool = True) -> dict:
+        results = {}
+        messages = []
+        if include_wifi:
+            wifi = self._wifi_status()
+            results["wifi"] = wifi
+            messages.append(wifi.get("message", "Wi-Fi status unavailable."))
+        if include_bluetooth:
+            bluetooth = self._bluetooth_status()
+            results["bluetooth"] = bluetooth
+            messages.append(bluetooth.get("message", "Bluetooth status unavailable."))
+        return self._ok(results, " ".join(messages))
+
+    def _search_roots(self, scope: str = "user") -> list[Path]:
+        home = Path.home()
+        names = ["Desktop", "Downloads", "Documents", "Pictures", "Videos", "Music"]
+        roots = [home / name for name in names if (home / name).exists()]
+        if not roots and home.exists():
+            roots = [home]
+        if scope == "pc":
+            system_drive = Path(os.environ.get("SystemDrive", "C:") + "\\")
+            if system_drive.exists():
+                roots.append(system_drive)
+        unique = []
+        for root in roots:
+            if root not in unique:
+                unique.append(root)
+        return unique
+
+    def _search_files(self, query: str, scope: str = "user", max_results: int = 10, timeout_seconds: int = 18) -> dict:
+        if err := self._require_desktop():
+            return err
+        needle = re.sub(r"\s+", " ", (query or "").strip().lower())
+        if not needle:
+            return self._err("Tell me the file name or part of the file name to search.")
+        tokens = [token for token in re.split(r"\s+", needle) if token not in {"file", "folder", "document"}]
+        if not tokens:
+            tokens = [needle]
+
+        matches = []
+        started = time.monotonic()
+        for root in self._search_roots(scope):
+            if time.monotonic() - started > timeout_seconds:
+                break
+            try:
+                walker = os.walk(root)
+                for dirpath, dirnames, filenames in walker:
+                    dirnames[:] = [
+                        d for d in dirnames
+                        if d.lower() not in self._SKIP_SEARCH_DIRS and not d.startswith(".")
+                    ]
+                    names = [(name, "file") for name in filenames] + [(name, "folder") for name in dirnames]
+                    for name, item_type in names:
+                        lower_name = name.lower()
+                        if needle in lower_name or all(token in lower_name for token in tokens):
+                            path = Path(dirpath) / name
+                            matches.append({
+                                "name": name,
+                                "path": str(path),
+                                "type": item_type,
+                            })
+                            if len(matches) >= max_results:
+                                raise StopIteration
+                    if time.monotonic() - started > timeout_seconds:
+                        raise TimeoutError
+            except (PermissionError, OSError):
+                continue
+            except (StopIteration, TimeoutError):
+                break
+
+        if not matches:
+            return self._ok(
+                {"query": query, "matches": [], "searched_roots": [str(p) for p in self._search_roots(scope)]},
+                f"No matching file found for {query}.",
+            )
+
+        first = Path(matches[0]["path"])
+        self._open_in_explorer(first)
+        return self._ok(
+            {
+                "query": query,
+                "matches": matches,
+                "searched_roots": [str(p) for p in self._search_roots(scope)],
+                "browser_action": self._browser_action(str(first)),
+            },
+            f"Found {len(matches)} match(es) for {query}. Opened the first file location.",
+        )
+
+    def _running_apps(self, limit: int = 12) -> dict:
+        if err := self._require_desktop():
+            return err
+        try:
+            import psutil
+        except Exception as exc:
+            return self._err(f"Running app monitor needs psutil. Details: {exc}")
+
+        rows = []
+        current_pid = os.getpid()
+        for proc in psutil.process_iter(["pid", "name", "memory_info", "username"]):
+            try:
+                name = proc.info.get("name") or ""
+                pid = int(proc.info.get("pid") or 0)
+                if not name or pid == current_pid or name.lower() in self._PROTECTED_PROCESS_NAMES:
+                    continue
+                memory = proc.info.get("memory_info").rss if proc.info.get("memory_info") else 0
+                if memory <= 20 * 1024 * 1024 and name.lower() not in self._CLOSE_ALL_PROCESS_NAMES:
+                    continue
+                rows.append({
+                    "pid": pid,
+                    "name": name,
+                    "memory_mb": round(memory / (1024 * 1024), 1),
+                    "username": proc.info.get("username") or "",
+                })
+            except (psutil.NoSuchProcess, psutil.AccessDenied, ValueError):
+                continue
+        rows.sort(key=lambda item: item["memory_mb"], reverse=True)
+        rows = rows[:max(1, min(30, int(limit or 12)))]
+        if not rows:
+            return self._ok({"background_apps": []}, "No major background apps found.")
+        names = ", ".join(f"{item['name']} {item['memory_mb']} MB" for item in rows[:5])
+        return self._ok({"background_apps": rows}, f"Top background apps: {names}.")
+
+    def run(
+        self,
+        action: str = "status",
+        target: str = "",
+        percent: int | None = None,
+        delay: int = 30,
+        query: str = "",
+        scope: str = "user",
+        include_wifi: bool = True,
+        include_bluetooth: bool = True,
+        limit: int = 12,
+    ) -> dict:
+        try:
+            action_key = (action or "status").lower().strip()
+            if action_key == "close_all":
+                return self._close_all_apps()
+            if action_key in {"shutdown", "restart", "cancel_shutdown"}:
+                return self._power(action_key, delay=delay)
+            if action_key == "screenshot":
+                return self._screenshot()
+            if action_key in {"volume", "full", "mute", "unmute", "volume_status"}:
+                return self._volume(percent=percent, action=action_key)
+            if action_key == "wifi_status":
+                return self._wifi_status()
+            if action_key == "bluetooth_status":
+                return self._bluetooth_status()
+            if action_key == "network_status":
+                return self._network_status(include_wifi=include_wifi, include_bluetooth=include_bluetooth)
+            if action_key == "search_files":
+                return self._search_files(query=query or target, scope=scope)
+            if action_key == "running_apps":
+                return self._running_apps(limit=limit)
+            return self._err(f"Unsupported desktop system action: {action}")
+        except Exception as exc:
+            return self._err(str(exc))
+
 
 class FileSystemTool(MCPTool):
     """
@@ -2439,6 +2906,7 @@ class MCPRegistry:
         self._tools: dict[str, MCPTool] = {}
         for tool_cls in [
             AppLauncherTool,
+            DesktopSystemTool,
             FileSystemTool,
             WeatherTool,
             NewsTool,

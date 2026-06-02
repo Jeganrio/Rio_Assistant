@@ -17,8 +17,10 @@ from __future__ import annotations
 
 import os
 import datetime
+import subprocess
 from typing import Optional, List
 from urllib.parse import quote_plus
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -42,6 +44,10 @@ class CommandRequest(BaseModel):
 class SpeakRequest(BaseModel):
     text: str
     rate: int = 125
+
+
+class LocalPathRequest(BaseModel):
+    path: str
 
 
 class AIResponse(BaseModel):
@@ -94,6 +100,32 @@ async def ui_events(since: int = Query(0, ge=0)):
         "message": "Events retrieved",
         "data": AI_logic.get_ui_events(since),
     }
+
+
+@router.post("/open-local-path", response_model=AIResponse)
+async def open_local_path(request: LocalPathRequest):
+    """Open a local file/folder location from the desktop web UI."""
+    if os.getenv("CUBY_CLOUD", "").lower() in {"1", "true", "yes"}:
+        return {
+            "status": "error",
+            "message": "Opening local Windows paths is available only in the desktop app.",
+            "data": {},
+        }
+    path = Path(request.path).expanduser()
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Path not found: {path}")
+    try:
+        if path.is_file():
+            subprocess.Popen(["explorer", f"/select,{path}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            os.startfile(str(path))
+        return {
+            "status": "success",
+            "message": f"Opened location: {path}",
+            "data": {"path": str(path)},
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Could not open path: {exc}")
 
 
 @router.post("/stop", response_model=AIResponse)

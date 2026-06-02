@@ -11,6 +11,8 @@ pyjokes>=0.6,<1.0
 pywhatkit>=5.4,<6.0
 PyAutoGUI>=0.9.54,<1.0
 PyGetWindow>=0.0.9,<1.0
+comtypes>=1.4,<2.0; platform_system == "Windows"
+pycaw>=20240210,<20260000; platform_system == "Windows"
 
 wikipedia>=1.4,<2.0
 googlesearch-python>=1.2,<2.0

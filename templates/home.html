@@ -1412,22 +1412,42 @@
       if (!actionBox || !actionLink) return;
       actionBox.hidden = true;
       actionLink.removeAttribute('href');
+      actionLink.removeAttribute('target');
+      actionLink.removeAttribute('data-action-type');
+      actionLink.removeAttribute('data-local-path');
       actionLink.textContent = 'Open in new tab';
     }
 
     function showBrowserActionPrompt(action) {
       const actionBox = document.getElementById('browserAction');
       const actionLink = document.getElementById('browserActionLink');
-      if (!actionBox || !actionLink || !action || !action.url) return;
-      actionLink.href = action.url;
-      actionLink.target = action.target || '_blank';
-      actionLink.rel = 'noopener noreferrer';
-      actionLink.textContent = action.label || 'Open in new tab';
+      if (!actionBox || !actionLink || !action) return;
+      if (action.type === 'open_local_path' && action.path) {
+        actionLink.href = '#';
+        actionLink.removeAttribute('target');
+        actionLink.dataset.actionType = 'open_local_path';
+        actionLink.dataset.localPath = action.path;
+        actionLink.textContent = action.label || 'Open file location';
+      } else if (action.type === 'open_url' && action.url) {
+        actionLink.href = action.url;
+        actionLink.target = action.target || '_blank';
+        actionLink.rel = 'noopener noreferrer';
+        actionLink.dataset.actionType = 'open_url';
+        actionLink.removeAttribute('data-local-path');
+        actionLink.textContent = action.label || 'Open in new tab';
+      } else {
+        return;
+      }
       actionBox.hidden = false;
     }
 
     function performBrowserAction(action) {
-      if (!action || action.type !== 'open_url' || !action.url) return;
+      if (!action) return;
+      if (action.type === 'open_local_path' && action.path) {
+        showBrowserActionPrompt(action);
+        return;
+      }
+      if (action.type !== 'open_url' || !action.url) return;
       let opened = null;
       try {
         opened = window.open(action.url, action.target || '_blank');
@@ -1437,6 +1457,25 @@
       }
       if (!opened) {
         showBrowserActionPrompt(action);
+      }
+    }
+
+    async function openLocalPathFromPrompt(event) {
+      const actionLink = event.currentTarget;
+      if (!actionLink || actionLink.dataset.actionType !== 'open_local_path') return;
+      event.preventDefault();
+      const localPath = actionLink.dataset.localPath || '';
+      if (!localPath) return;
+      try {
+        const res = await fetch('/api/ai/open-local-path', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: localPath })
+        });
+        const data = await res.json();
+        showText(data.message || 'Opened file location.', res.ok ? 'clear-light' : 'alert-light', true);
+      } catch (err) {
+        showText('Could not open local path from this browser.', 'alert-light', true);
       }
     }
 
@@ -1790,6 +1829,7 @@
     }
 
     document.getElementById('sendButton').addEventListener('click', window.sendTypedCommand);
+    document.getElementById('browserActionLink').addEventListener('click', openLocalPathFromPrompt);
     document.getElementById('mailCancelButton').addEventListener('click', () => cancelMailFlow());
     document.getElementById('textInput').addEventListener('keydown', event => {
       if (event.key === 'Enter') {

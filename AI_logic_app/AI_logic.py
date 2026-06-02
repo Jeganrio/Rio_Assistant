@@ -1418,6 +1418,28 @@ def _speak_result(result: dict) -> str:
             speak(line)
         return json.dumps(data["flights"][:3], indent=2)
 
+    # --- desktop file search ---
+    if "matches" in data:
+        matches = data.get("matches", [])
+        speak(msg)
+        if not matches:
+            return msg
+        return "\n".join(
+            f"{i + 1}. {item.get('name', 'match')} - {item.get('path', '')}"
+            for i, item in enumerate(matches)
+        )
+
+    # --- desktop background app monitor ---
+    if "background_apps" in data:
+        apps = data.get("background_apps", [])
+        speak(msg)
+        if not apps:
+            return msg
+        return "\n".join(
+            f"{i + 1}. {item.get('name', 'app')} - {item.get('memory_mb', 0)} MB"
+            for i, item in enumerate(apps)
+        )
+
     # --- filesystem list ---
     if "items" in data:
         items = data["items"]
@@ -2263,6 +2285,102 @@ def _extract_app_target(query: str, triggers: tuple[str, ...]) -> str:
     return ""
 
 
+def _parse_percent_from_query(query: str) -> int | None:
+    match = re.search(r"\b(\d{1,3})\s*(?:%|percent|percentage)?\b", query)
+    if not match:
+        return None
+    value = int(match.group(1))
+    return max(0, min(100, value))
+
+
+def _clean_file_search_query(query: str) -> str:
+    q = query.strip().lower()
+    q = re.sub(
+        r"\b(search|find|locate|look for|show|check)\b",
+        " ",
+        q,
+    )
+    q = re.sub(
+        r"\b(file|files|folder|folders|document|documents|in pc|on pc|in computer|on computer|in laptop|on laptop|available|availability|path|location|where is|where are|please)\b",
+        " ",
+        q,
+    )
+    q = re.sub(r"\s+", " ", q).strip()
+    return q
+
+
+def _parse_desktop_system_request(query: str) -> dict | None:
+    q = query.strip().lower()
+    q = q.replace("wi fi", "wifi").replace("wi-fi", "wifi")
+
+    if any(phrase in q for phrase in ("cancel shutdown", "cancel restart", "abort shutdown", "abort restart")):
+        return {"action": "cancel_shutdown"}
+
+    if any(phrase in q for phrase in (
+        "shutdown pc", "shutdown my pc", "shutdown the pc",
+        "shutdown computer", "shutdown my computer", "shutdown the computer",
+        "shut down pc", "shut down my pc", "shut down the pc",
+        "shut down computer", "shut down my computer", "shut down the computer",
+        "power off pc", "power off computer", "turn off pc", "turn off computer",
+    )):
+        delay = 5 if "now" in q or "immediately" in q else 30
+        return {"action": "shutdown", "delay": delay}
+
+    if any(phrase in q for phrase in (
+        "restart pc", "restart my pc", "restart the pc",
+        "restart computer", "restart my computer", "restart the computer",
+        "reboot pc", "reboot my pc", "reboot the pc",
+        "reboot computer", "reboot my computer", "reboot the computer",
+    )):
+        delay = 5 if "now" in q or "immediately" in q else 30
+        return {"action": "restart", "delay": delay}
+
+    if "screenshot" in q or "screen shot" in q or "capture screen" in q:
+        return {"action": "screenshot"}
+
+    if "volume" in q or q in {"mute", "unmute"}:
+        if "mute" in q and "unmute" not in q:
+            return {"action": "mute"}
+        if "unmute" in q:
+            return {"action": "unmute"}
+        if any(word in q for word in ("full", "maximum", "max", "100 percent", "100%")):
+            return {"action": "full"}
+        percent = _parse_percent_from_query(q)
+        if percent is not None:
+            return {"action": "volume", "percent": percent}
+        if "status" in q or "level" in q or "check" in q:
+            return {"action": "volume_status"}
+
+    wants_wifi = "wifi" in q or "wireless network" in q
+    wants_bluetooth = "bluetooth" in q or "blue tooth" in q
+    if wants_wifi or wants_bluetooth:
+        if wants_wifi and wants_bluetooth:
+            return {"action": "network_status", "include_wifi": True, "include_bluetooth": True}
+        if wants_wifi:
+            return {"action": "wifi_status"}
+        return {"action": "bluetooth_status"}
+
+    if (
+        "running apps" in q
+        or "background apps" in q
+        or "background running apps" in q
+        or "monitor apps" in q
+        or "monitor background" in q
+        or "task manager" in q
+    ):
+        return {"action": "running_apps", "limit": 12}
+
+    if (
+        ("search" in q or "find" in q or "locate" in q or "look for" in q)
+        and any(word in q for word in ("file", "files", "folder", "folders", "document", "documents", "pc", "computer", "laptop"))
+    ):
+        file_query = _clean_file_search_query(q)
+        scope = "pc" if any(word in q for word in ("pc", "computer", "laptop", "entire")) else "user"
+        return {"action": "search_files", "query": file_query, "scope": scope}
+
+    return None
+
+
 def _open_play_request(query: str) -> tuple[str, str] | None:
     q = query.strip().lower()
     if not q.startswith(("open ", "launch ", "start ", "run ")):
@@ -2365,11 +2483,18 @@ def _try_mcp(query: str, allow_voice_prompts: bool = False) -> str | None:
     _close_triggers = ("close ", "quit ", "exit ")
     if q.startswith(_close_triggers):
         target = _extract_app_target(q, _close_triggers)
-        if target in {"all", "all apps", "everything", "all applications"}:
-            msg = "For safety, I will not close every app at once. Tell me the app name to close."
-            speak(msg)
-            return msg
+        if target in {
+            "all", "all app", "all apps", "all running app", "all running apps",
+            "everything", "all application", "all applications",
+        }:
+            result = mcp.run("desktop_system", action="close_all")
+            return _speak_result(result)
         result = mcp.run("app_launcher", action="close", target=target)
+        return _speak_result(result)
+
+    desktop_req = _parse_desktop_system_request(q)
+    if desktop_req:
+        result = mcp.run("desktop_system", **desktop_req)
         return _speak_result(result)
 
     if _is_briefing_request(q):
