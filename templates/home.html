@@ -468,43 +468,95 @@
       text-shadow: 0 0 42px var(--light-main);
     }
 
-    .command-clouds {
-      width: min(620px, calc(100vw - 40px));
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    .command-dock {
+      width: min(760px, calc(100vw - 42px));
+      padding: 11px;
+      border: 1px solid color-mix(in srgb, var(--light-main), white 14%);
+      border-radius: 10px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+        rgba(3, 8, 10, 0.46);
+      box-shadow:
+        0 0 34px color-mix(in srgb, var(--light-main), transparent 74%),
+        inset 0 0 18px rgba(255,255,255,0.04);
+      backdrop-filter: blur(16px);
+    }
+
+    .command-dock-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       gap: 10px;
+      margin-bottom: 9px;
+    }
+
+    .command-group {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--light-main), transparent 78%);
+      color: color-mix(in srgb, var(--text), white 4%);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .command-shuffle {
+      width: 30px;
+      height: 30px;
+      border: 1px solid color-mix(in srgb, var(--light-main), white 16%);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .command-clouds {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 9px;
     }
 
     .command-cloud {
       min-width: 0;
-      min-height: 42px;
-      padding: 0 16px;
-      border: 1px solid color-mix(in srgb, var(--light-main), white 16%);
+      min-height: 48px;
+      padding: 0 12px;
+      border: 1px solid color-mix(in srgb, var(--light-main), white 14%);
       border-radius: 999px;
       background:
-        radial-gradient(circle at 18% 12%, rgba(255,255,255,0.22), transparent 24%),
-        rgba(4, 9, 10, 0.58);
-      color: color-mix(in srgb, var(--text), white 6%);
+        radial-gradient(circle at 15% 18%, rgba(255,255,255,0.24), transparent 22%),
+        linear-gradient(135deg, color-mix(in srgb, var(--light-main), transparent 78%), rgba(0,0,0,0.28));
+      color: color-mix(in srgb, var(--text), white 7%);
       box-shadow:
-        0 0 22px color-mix(in srgb, var(--light-main), transparent 72%),
+        0 0 20px color-mix(in srgb, var(--light-main), transparent 72%),
         inset 0 0 14px rgba(255,255,255,0.04);
-      backdrop-filter: blur(14px);
       cursor: pointer;
-      font-size: clamp(13px, 1vw, 15px);
-      font-weight: 800;
-      line-height: 1.2;
+      font-size: clamp(12.5px, 0.86vw, 14px);
+      font-weight: 850;
+      line-height: 1.18;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      text-align: left;
       transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
     }
 
     .command-cloud:hover {
-      transform: translateY(-2px);
-      border-color: color-mix(in srgb, var(--light-main), white 34%);
+      transform: translateY(-3px);
+      border-color: color-mix(in srgb, var(--light-main), white 36%);
       box-shadow:
         0 0 30px color-mix(in srgb, var(--light-main), transparent 54%),
         inset 0 0 16px rgba(255,255,255,0.06);
+    }
+
+    .command-cloud span {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
     }
 
     .start-btn {
@@ -701,6 +753,7 @@
       margin: 0;
       padding: 0;
       list-style: none;
+      overflow: visible;
     }
 
     .updates-list li {
@@ -717,7 +770,7 @@
       font-size: clamp(16px, 1.05vw, 18px);
       line-height: 1.36;
       overflow-wrap: anywhere;
-      overflow: hidden;
+      overflow: visible;
       box-shadow: 0 0 22px color-mix(in srgb, var(--light-main), transparent 66%);
       animation: updateFloat 2.8s ease-in-out infinite;
       transition:
@@ -735,15 +788,16 @@
       position: absolute;
       top: 50%;
       left: 100%;
-      width: clamp(90px, 10vw, 180px);
+      width: clamp(110px, 11vw, 220px);
       height: 10px;
       border: 1px solid color-mix(in srgb, var(--light-main), white 12%);
       border-radius: 999px;
       background: linear-gradient(90deg, color-mix(in srgb, var(--light-main), transparent 28%), transparent);
       box-shadow: 0 0 18px color-mix(in srgb, var(--light-main), transparent 42%);
-      opacity: 0.46;
+      opacity: 0.68;
       transform: translateY(-50%) rotate(-8deg);
       transform-origin: left center;
+      pointer-events: none;
     }
 
     .updates-list li::after {
@@ -756,7 +810,10 @@
       border: 1px solid color-mix(in srgb, var(--light-main), white 16%);
       border-left: 0;
       border-radius: 0 999px 999px 0;
-      opacity: 0.54;
+      background: rgba(255,255,255,0.03);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--light-main), transparent 38%);
+      opacity: 0.72;
+      pointer-events: none;
     }
 
     .updates-list li:nth-child(2n)::before {
@@ -817,6 +874,11 @@
     body.briefing-focus .updates-list li:not(.is-active) {
       opacity: 0.46;
       transform: scale(0.94);
+    }
+
+    body.briefing-focus .updates-list li:not(.is-active)::before,
+    body.briefing-focus .updates-list li:not(.is-active)::after {
+      opacity: 0.34;
     }
 
     .updates-list li:nth-child(2n) {
@@ -917,14 +979,18 @@
       .robot-arm {
         opacity: 0.38;
       }
+      .command-dock {
+        width: min(390px, calc(100vw - 28px));
+        padding: 9px;
+      }
       .command-clouds {
-        grid-template-columns: 1fr;
-        width: min(360px, calc(100vw - 28px));
+        grid-template-columns: 1fr 1fr;
         gap: 7px;
       }
       .command-cloud {
         min-height: 38px;
         font-size: 13px;
+        text-align: center;
       }
     }
   </style>
@@ -996,7 +1062,13 @@
   </div>
 
   <main class="center">
-    <div class="command-clouds" id="commandClouds" aria-label="Suggested commands"></div>
+    <div class="command-dock" id="commandDock" aria-label="Suggested commands">
+      <div class="command-dock-header">
+        <span class="command-group" id="commandGroupLabel">Daily</span>
+        <button class="command-shuffle" id="commandShuffle" type="button" aria-label="Refresh quick commands">↻</button>
+      </div>
+      <div class="command-clouds" id="commandClouds"></div>
+    </div>
     <h1 class="title">CUBY</h1>
     <button class="start-btn" id="startButton">START AI</button>
   </main>
@@ -1054,25 +1126,30 @@
     ];
     const wakeWordsWithCopy = [...wakeWords, 'copy'];
     const commandCloudSets = [
-      ['anything important today', 'weather in Trichy tomorrow', 'check Gmail interviews', 'check my calendar'],
-      ['check wifi and bluetooth', 'monitor background apps', 'volume status', 'take screenshot'],
-      ['top 5 Tamil Nadu news', 'top 10 Indian news', 'train availability Trichy to Chennai', 'check power cut in Ponnagar'],
-      ['search file resume in pc', 'find document project report', 'show reminders', 'battery percentage'],
-      ['switch to Tamil', 'switch to English', 'switch to male voice', 'switch to female voice'],
-      ['open YouTube and play New York Nagaram', 'open Spotify', 'set volume 70 percent', 'mute volume']
+      { group: 'Daily', commands: ['anything important today', 'weather in Trichy tomorrow', 'check Gmail interviews', 'check my calendar'] },
+      { group: 'System', commands: ['check wifi and bluetooth', 'monitor background apps', 'volume status', 'take screenshot'] },
+      { group: 'Travel', commands: ['top 5 Tamil Nadu news', 'train availability Trichy to Chennai', 'weather in Chennai tomorrow', 'check power cut in Ponnagar'] },
+      { group: 'Files', commands: ['search file resume in pc', 'find document project report', 'show reminders', 'battery percentage'] },
+      { group: 'Voice', commands: ['switch to Tamil', 'switch to English', 'switch to male voice', 'switch to female voice'] },
+      { group: 'Media', commands: ['open YouTube and play New York Nagaram', 'open Spotify', 'set volume 70 percent', 'mute volume'] }
     ];
     let commandCloudSetIndex = Number(localStorage.getItem('cubyCommandCloudSet') || '0') % commandCloudSets.length;
 
     function renderCommandClouds() {
       const cloudBox = document.getElementById('commandClouds');
+      const groupLabel = document.getElementById('commandGroupLabel');
       if (!cloudBox) return;
+      const currentSet = commandCloudSets[commandCloudSetIndex];
+      if (groupLabel) groupLabel.textContent = currentSet.group;
       cloudBox.replaceChildren();
-      commandCloudSets[commandCloudSetIndex].forEach(command => {
+      currentSet.commands.forEach(command => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'command-cloud';
-        button.textContent = command;
         button.title = command;
+        const label = document.createElement('span');
+        label.textContent = command;
+        button.appendChild(label);
         button.addEventListener('click', () => runCommandCloud(command));
         cloudBox.appendChild(button);
       });
@@ -1915,6 +1992,7 @@
     document.getElementById('sendButton').addEventListener('click', window.sendTypedCommand);
     document.getElementById('browserActionLink').addEventListener('click', openLocalPathFromPrompt);
     document.getElementById('mailCancelButton').addEventListener('click', () => cancelMailFlow());
+    document.getElementById('commandShuffle').addEventListener('click', rotateCommandClouds);
     document.getElementById('textInput').addEventListener('keydown', event => {
       if (event.key === 'Enter') {
         event.preventDefault();
