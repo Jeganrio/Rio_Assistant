@@ -64,6 +64,21 @@ To remove only the Windows shortcuts and generated launcher:
 powershell -ExecutionPolicy Bypass -File scripts\uninstall_desktop_app.ps1
 ```
 
+To create a clickable Windows setup EXE:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build_setup_exe.ps1 -Clean
+```
+
+The setup file is created at:
+
+```text
+dist\CUBY_Assistant_Setup.exe
+```
+
+Double-click `CUBY_Assistant_Setup.exe` to install the Desktop and Start Menu
+shortcuts for this local CUBY project.
+
 ## Project Structure
 
 ```text
@@ -113,6 +128,9 @@ powershell -ExecutionPolicy Bypass -File scripts\install_desktop_app.ps1
 
 # Remove local Windows launcher shortcuts
 powershell -ExecutionPolicy Bypass -File scripts\uninstall_desktop_app.ps1
+
+# Build clickable setup EXE
+powershell -ExecutionPolicy Bypass -File scripts\build_setup_exe.ps1 -Clean
 
 # Check dependencies
 python -m pip check
