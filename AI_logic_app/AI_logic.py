@@ -2112,6 +2112,8 @@ def _normalize_mail_command_phrase(q: str) -> str:
         " send tamil ": " send mail ",
         " sent mail ": " send mail ",
         " send the mail ": " send mail ",
+        " send emails ": " send email ",
+        " send email message ": " send email ",
         " send a email ": " send email ",
         " send an email ": " send email ",
         " compose mail ": " send mail ",
@@ -2120,6 +2122,15 @@ def _normalize_mail_command_phrase(q: str) -> str:
     for src, dst in replacements.items():
         value = value.replace(src, dst)
     return re.sub(r"\s+", " ", value).strip()
+
+
+def _is_send_mail_request(q: str) -> bool:
+    mail_words = ("gmail", "mail", "mails", "email", "emails")
+    send_words = ("send", "compose", "write", "draft")
+    return (
+        any(word in q for word in send_words)
+        and any(word in q for word in mail_words)
+    ) or "mail to" in q or "email to" in q
 
 
 def _extract_voice_email_address(q: str) -> str:
@@ -2146,6 +2157,70 @@ def _extract_voice_email_address(q: str) -> str:
         if match:
             return match.group(0)
     return ""
+
+
+def _email_from_saved_contact(q: str) -> str:
+    contacts_path = Path(BASE_DIR) / "AI_logic_app" / "data" / "contacts.json"
+    try:
+        contacts = json.loads(contacts_path.read_text()) if contacts_path.exists() else {}
+    except Exception:
+        contacts = {}
+    for name, email in contacts.items():
+        if name.lower() in q.lower():
+            return email
+    return ""
+
+
+def _mail_subject_body_from_query(q: str) -> tuple[str, str]:
+    subject_match = re.search(
+        r"\b(?:subject|title)\s+(.+?)(?:\s+(?:body|content|message)\s+|$)",
+        q,
+    )
+    body_match = re.search(r"\b(?:body|content|message)\s+(.+)$", q)
+    subject = subject_match.group(1).strip() if subject_match else ""
+    body = body_match.group(1).strip() if body_match else ""
+    return subject, body
+
+
+def _ask_voice_mail_field(prompt: str, seconds: int = 20) -> str:
+    speak(prompt)
+    answer = takecommandexceptional(seconds).strip()
+    if answer in {"cancel", "cancel mail", "stop mail", "discard"}:
+        return ""
+    return answer
+
+
+def _collect_voice_mail_details(
+    q: str,
+    to_email: str,
+    subject: str,
+    body: str,
+) -> tuple[str, str, str] | None:
+    if not to_email:
+        recipient = _ask_voice_mail_field(
+            "Who should I send this Gmail to? Say the full email address.",
+            seconds=22,
+        )
+        to_email = _extract_voice_email_address(recipient) or _email_from_saved_contact(recipient)
+        if not to_email:
+            speak("I could not understand the recipient email address. Gmail cancelled.")
+            return None
+
+    if not subject:
+        subject = _ask_voice_mail_field("What is the subject for this Gmail?", seconds=22)
+        subject = re.sub(r"^(subject|title)\s+", "", subject).strip()
+        if not subject:
+            speak("I did not hear the subject. Gmail cancelled.")
+            return None
+
+    if not body:
+        body = _ask_voice_mail_field("What content should I send in the Gmail?", seconds=40)
+        body = re.sub(r"^(body|content|message)\s+", "", body).strip()
+        if not body:
+            speak("I did not hear the content. Gmail cancelled.")
+            return None
+
+    return to_email, subject, body
 
 
 def _is_app_list_request(query: str) -> bool:
@@ -2225,7 +2300,7 @@ def _open_play_request(query: str) -> tuple[str, str] | None:
     return platform, song
 
 
-def _try_mcp(query: str) -> str | None:
+def _try_mcp(query: str, allow_voice_prompts: bool = False) -> str | None:
     """
     Parse the voice/text query for MCP intent.
     Returns a spoken response string, or None if no MCP tool matched.
@@ -2521,35 +2596,25 @@ def _try_mcp(query: str) -> str | None:
         )
         return _speak_result(result)
 
-    if (
-        "send email" in q
-        or "send gmail" in q
-        or "send a mail" in q
-        or "send mail" in q
-        or "mail to" in q
-        or "email to" in q
-    ):
-        to_email = _extract_voice_email_address(q)
+    if _is_send_mail_request(q):
+        to_email = _extract_voice_email_address(q) or _email_from_saved_contact(q)
+        subject, body = _mail_subject_body_from_query(q)
         if not to_email:
-            contacts_path = Path(BASE_DIR) / "AI_logic_app" / "data" / "contacts.json"
-            try:
-                contacts = json.loads(contacts_path.read_text()) if contacts_path.exists() else {}
-            except Exception:
-                contacts = {}
-            for name, email in contacts.items():
-                if name.lower() in q:
-                    to_email = email
-                    break
-        if not to_email:
-            return "No email address or saved contact found. Say add contact name email address first."
+            if allow_voice_prompts:
+                details = _collect_voice_mail_details(q, to_email, subject, body)
+                if not details:
+                    return "Gmail cancelled."
+                to_email, subject, body = details
+            else:
+                return "Gmail composer is ready. Type or say send mail, then provide recipient, subject, and content."
+        elif allow_voice_prompts and (not subject or not body):
+            details = _collect_voice_mail_details(q, to_email, subject, body)
+            if not details:
+                return "Gmail cancelled."
+            to_email, subject, body = details
 
-        subject_match = re.search(
-            r"\b(?:subject|title)\s+(.+?)(?:\s+(?:body|content|message)\s+|$)",
-            q,
-        )
-        body_match = re.search(r"\b(?:body|content|message)\s+(.+)$", q)
-        subject = subject_match.group(1).strip() if subject_match else "Message from CUBY"
-        body = body_match.group(1).strip() if body_match else "Hello from CUBY AI Assistant"
+        subject = subject or "Message from CUBY"
+        body = body or "Hello from CUBY AI Assistant"
 
         result = mcp.run(
             "gmail",
@@ -3064,7 +3129,7 @@ def main() -> None:
             continue
 
         # 1 — try MCP tools first
-        mcp_resp = _try_mcp(query)
+        mcp_resp = _try_mcp(query, allow_voice_prompts=True)
         if mcp_resp:
             try:
                 save_data_in_db(query, mcp_resp)
