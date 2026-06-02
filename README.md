@@ -29,11 +29,47 @@ You can also run:
 scripts\run_server.bat
 ```
 
+## Windows Desktop Install
+
+CUBY can be installed as a local Windows launcher. This keeps all desktop
+automation on your own computer, so microphone input, app opening, app closing,
+Gmail OAuth, Spotify, VS Code, Chrome, and file/folder actions run locally.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install_desktop_app.ps1
+```
+
+After installation, open **CUBY Assistant** from the Desktop or Start Menu.
+The launcher starts the local FastAPI server and opens `http://127.0.0.1:8000/`.
+
+Useful desktop commands:
+
+```text
+open Spotify
+close Spotify
+open VS Code
+close Chrome
+open YouTube and play new york nagaram song
+list apps
+show apps matching office
+close it
+```
+
+`close it` closes the active foreground window. Named close commands such as
+`close Spotify` close the matching local app process.
+
+To remove only the Windows shortcuts and generated launcher:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\uninstall_desktop_app.ps1
+```
+
 ## Project Structure
 
 ```text
 Cuby_Assistant-main/
 |-- main.py                  # Compatibility entrypoint for uvicorn main:app
+|-- desktop/                 # Local Windows desktop launcher
 |-- cuby/                    # FastAPI backend package
 |   |-- main.py              # Application setup, routes, static pages
 |   |-- config.py            # App settings and paths
@@ -71,6 +107,12 @@ python scripts\init_db.py
 
 # Run development server
 uvicorn main:app --reload
+
+# Install local Windows launcher
+powershell -ExecutionPolicy Bypass -File scripts\install_desktop_app.ps1
+
+# Remove local Windows launcher shortcuts
+powershell -ExecutionPolicy Bypass -File scripts\uninstall_desktop_app.ps1
 
 # Check dependencies
 python -m pip check

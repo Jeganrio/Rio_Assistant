@@ -4,7 +4,7 @@ mcp_tools.py
 MCP (Model Context Protocol) inspired tool integrations for CUBY AI Assistant.
 
 Provides:
-  - AppLauncherTool      : open VS Code, Chrome, Notepad, any app or file/folder
+  - AppLauncherTool      : open/close/list apps, websites, files and folders
   - FileSystemTool       : list, read, create, delete files/folders
   - WeatherTool          : current weather + forecast via Open-Meteo (free, no key)
   - NewsTool             : dynamic Google News RSS + optional GNews top headlines
@@ -125,15 +125,135 @@ import webbrowser
 class AppLauncherTool(MCPTool):
 
     """
-    Dynamically open installed applications,
-    websites, files and folders.
+    Open, close, and list installed applications, websites, files and folders.
     """
 
     name = "app_launcher"
 
     description = (
-        "Launch installed apps, websites, files and folders dynamically."
+        "Open, close, and list local Windows apps, websites, files, and folders."
     )
+
+    _WEBSITES = {
+        "youtube": "https://youtube.com",
+        "gmail": "https://mail.google.com",
+        "calendar": "https://calendar.google.com",
+        "google calendar": "https://calendar.google.com",
+        "spotify": "https://open.spotify.com",
+        "spotify web": "https://open.spotify.com",
+        "linkedin": "https://linkedin.com",
+        "github": "https://github.com",
+        "google": "https://google.com",
+        "chatgpt": "https://chat.openai.com",
+        "netflix": "https://netflix.com",
+        "amazon": "https://amazon.in",
+        "hotstar": "https://hotstar.com",
+    }
+
+    _KNOWN_APP_PATHS = {
+        "spotify": [
+            r"%APPDATA%\Spotify\Spotify.exe",
+            r"%LOCALAPPDATA%\Microsoft\WindowsApps\Spotify.exe",
+            r"C:\Program Files\Spotify\Spotify.exe",
+            r"C:\Program Files (x86)\Spotify\Spotify.exe",
+        ],
+        "chrome": [
+            r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe",
+            r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe",
+            r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe",
+        ],
+        "google chrome": [
+            r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe",
+            r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe",
+            r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe",
+        ],
+        "edge": [
+            r"%PROGRAMFILES(X86)%\Microsoft\Edge\Application\msedge.exe",
+            r"%PROGRAMFILES%\Microsoft\Edge\Application\msedge.exe",
+        ],
+        "microsoft edge": [
+            r"%PROGRAMFILES(X86)%\Microsoft\Edge\Application\msedge.exe",
+            r"%PROGRAMFILES%\Microsoft\Edge\Application\msedge.exe",
+        ],
+        "vscode": [
+            r"%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe",
+            r"%PROGRAMFILES%\Microsoft VS Code\Code.exe",
+        ],
+        "vs code": [
+            r"%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe",
+            r"%PROGRAMFILES%\Microsoft VS Code\Code.exe",
+        ],
+        "visual studio code": [
+            r"%LOCALAPPDATA%\Programs\Microsoft VS Code\Code.exe",
+            r"%PROGRAMFILES%\Microsoft VS Code\Code.exe",
+        ],
+        "notepad": [r"%WINDIR%\System32\notepad.exe"],
+        "paint": [r"%WINDIR%\System32\mspaint.exe"],
+        "word": [r"%PROGRAMFILES%\Microsoft Office\root\Office16\WINWORD.EXE"],
+        "excel": [r"%PROGRAMFILES%\Microsoft Office\root\Office16\EXCEL.EXE"],
+        "powerpoint": [r"%PROGRAMFILES%\Microsoft Office\root\Office16\POWERPNT.EXE"],
+        "outlook": [r"%PROGRAMFILES%\Microsoft Office\root\Office16\OUTLOOK.EXE"],
+        "teams": [
+            r"%LOCALAPPDATA%\Microsoft\Teams\current\Teams.exe",
+            r"%LOCALAPPDATA%\Microsoft\WindowsApps\ms-teams.exe",
+        ],
+        "whatsapp": [r"%LOCALAPPDATA%\WhatsApp\WhatsApp.exe"],
+        "telegram": [r"%APPDATA%\Telegram Desktop\Telegram.exe"],
+    }
+
+    _PATH_COMMANDS = {
+        "notepad": "notepad",
+        "calculator": "calc",
+        "calc": "calc",
+        "cmd": "cmd",
+        "command prompt": "cmd",
+        "powershell": "powershell",
+        "windows terminal": "wt",
+        "terminal": "wt",
+        "explorer": "explorer",
+        "file explorer": "explorer",
+        "vscode": "code",
+        "vs code": "code",
+        "visual studio code": "code",
+    }
+
+    _PROTOCOLS = {
+        "spotify": "spotify:",
+        "calculator": "calculator:",
+        "calc": "calculator:",
+        "settings": "ms-settings:",
+        "windows settings": "ms-settings:",
+        "mail": "mailto:",
+    }
+
+    _PROCESS_ALIASES = {
+        "spotify": ["Spotify.exe"],
+        "chrome": ["chrome.exe"],
+        "google chrome": ["chrome.exe"],
+        "edge": ["msedge.exe"],
+        "microsoft edge": ["msedge.exe"],
+        "firefox": ["firefox.exe"],
+        "browser": ["chrome.exe", "msedge.exe", "firefox.exe"],
+        "vscode": ["Code.exe"],
+        "vs code": ["Code.exe"],
+        "visual studio code": ["Code.exe"],
+        "notepad": ["notepad.exe"],
+        "calculator": ["CalculatorApp.exe", "Calculator.exe", "calc.exe"],
+        "calc": ["CalculatorApp.exe", "Calculator.exe", "calc.exe"],
+        "paint": ["mspaint.exe"],
+        "word": ["WINWORD.EXE"],
+        "excel": ["EXCEL.EXE"],
+        "powerpoint": ["POWERPNT.EXE"],
+        "outlook": ["OUTLOOK.EXE"],
+        "teams": ["Teams.exe", "ms-teams.exe"],
+        "whatsapp": ["WhatsApp.exe"],
+        "telegram": ["Telegram.exe"],
+        "vlc": ["vlc.exe"],
+        "zoom": ["Zoom.exe"],
+        "discord": ["Discord.exe"],
+        "file explorer": ["explorer.exe"],
+        "explorer": ["explorer.exe"],
+    }
 
     @staticmethod
     def _browser_action(url: str, label: str = "Open") -> dict:
@@ -143,6 +263,59 @@ class AppLauncherTool(MCPTool):
             "label": label,
             "target": "_blank",
         }
+
+    @staticmethod
+    def _expand_path(path_text: str) -> str:
+        return os.path.expandvars(path_text)
+
+    @staticmethod
+    def _strip_command_words(target: str) -> str:
+        value = (target or "").strip().strip("\"'")
+        value = re.sub(
+            r"^(please\s+)?(open|launch|start|run|close|quit|exit|stop)\s+",
+            "",
+            value,
+            flags=re.IGNORECASE,
+        )
+        value = re.sub(
+            r"\b(app|application|program|software)\b",
+            "",
+            value,
+            flags=re.IGNORECASE,
+        )
+        for marker in (" and play ", " then play ", " please "):
+            index = value.lower().find(marker)
+            if index > 0:
+                value = value[:index]
+        return re.sub(r"\s+", " ", value).strip()
+
+    def _normalize_target(self, target: str) -> tuple[str, str]:
+        display = self._strip_command_words(target)
+        key = display.lower().replace("-", " ").replace("_", " ").strip()
+        aliases = {
+            "google": "google",
+            "google chrome browser": "google chrome",
+            "chrome browser": "chrome",
+            "edge browser": "edge",
+            "visual studio": "visual studio code",
+            "code editor": "visual studio code",
+            "vs cod": "vs code",
+            "spotifi": "spotify",
+        }
+        key = aliases.get(key, key)
+        return display, key
+
+    @staticmethod
+    def _is_url(value: str) -> bool:
+        text = (value or "").strip().lower()
+        return text.startswith(("http://", "https://")) or text.startswith("www.")
+
+    @staticmethod
+    def _format_url(value: str) -> str:
+        text = value.strip()
+        if text.lower().startswith("www."):
+            return f"https://{text}"
+        return text
 
     # -------------------------------------------------------
     # START MENU PATHS
@@ -198,213 +371,224 @@ class AppLauncherTool(MCPTool):
 
         return apps
 
+    def _app_label(self, target: str, apps: dict[str, str]) -> tuple[str | None, str | None]:
+        if target in apps:
+            return target, apps[target]
+        for app_name, app_path in apps.items():
+            if target and target in app_name:
+                return app_name, app_path
+        return None, None
+
+    def _open_known_path(self, target: str) -> dict | None:
+        for app_path in self._KNOWN_APP_PATHS.get(target, []):
+            expanded = self._expand_path(app_path)
+            if os.path.exists(expanded):
+                os.startfile(expanded)
+                return self._ok({"app": target, "path": expanded}, f"Opened {target}")
+        return None
+
+    def _open_path_command(self, target: str) -> dict | None:
+        command = self._PATH_COMMANDS.get(target, target)
+        exe = shutil.which(command)
+        if not exe:
+            return None
+        subprocess.Popen([exe], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return self._ok({"exe": exe, "app": target}, f"Opened {target}")
+
+    def _open_protocol(self, target: str) -> dict | None:
+        protocol = self._PROTOCOLS.get(target)
+        if not protocol:
+            return None
+        try:
+            os.startfile(protocol)
+            return self._ok({"app": target, "protocol": protocol}, f"Opened {target}")
+        except Exception:
+            return None
+
+    def _open_target(self, target: str, url: str = "") -> dict:
+        display, key = self._normalize_target(target)
+        requested_url = url or (self._format_url(display) if self._is_url(display) else "")
+
+        if requested_url:
+            webbrowser.open_new_tab(requested_url)
+            return self._ok(
+                {"url": requested_url, "browser_action": self._browser_action(requested_url, "Open URL")},
+                f"Opened URL: {requested_url}",
+            )
+
+        if not display:
+            return self._err("No target specified.")
+
+        path = Path(display).expanduser()
+        if path.exists():
+            os.startfile(str(path))
+            return self._ok({"path": str(path)}, f"Opened {path.name}")
+
+        for opener in (self._open_known_path, self._open_path_command):
+            result = opener(key)
+            if result:
+                return result
+
+        apps = self._scan_apps()
+        app_name, app_path = self._app_label(key, apps)
+        if app_name and app_path:
+            os.startfile(app_path)
+            return self._ok({"app": app_name, "path": app_path}, f"Opened {app_name}")
+
+        result = self._open_protocol(key)
+        if result:
+            return result
+
+        if key in self._WEBSITES:
+            website_url = self._WEBSITES[key]
+            webbrowser.open_new_tab(website_url)
+            return self._ok(
+                {
+                    "website": key,
+                    "url": website_url,
+                    "browser_action": self._browser_action(website_url, f"Open {key}"),
+                },
+                f"Opened {key}",
+            )
+
+        search_url = f"https://www.google.com/search?q=download+{quote_plus(display)}"
+        webbrowser.open_new_tab(search_url)
+        return self._ok(
+            {"search": search_url, "browser_action": self._browser_action(search_url, "Search download")},
+            f"{display} not installed. Opened install page.",
+        )
+
+    def _process_names_for_target(self, target: str) -> list[str]:
+        display, key = self._normalize_target(target)
+        names = self._PROCESS_ALIASES.get(key)
+        if names:
+            return names
+
+        apps = self._scan_apps()
+        app_name, app_path = self._app_label(key, apps)
+        if app_path:
+            candidate = Path(app_path)
+            if candidate.suffix.lower() == ".exe":
+                return [candidate.name]
+
+        if display.lower().endswith(".exe"):
+            return [display]
+        return []
+
+    def _close_target(self, target: str) -> dict:
+        display, key = self._normalize_target(target)
+        if not display:
+            return self._err("No app specified to close.")
+
+        process_names = self._process_names_for_target(display)
+        if not process_names:
+            return self._err(
+                f"I do not know the running process for {display}. Try close it to close the active window."
+            )
+
+        try:
+            import psutil
+        except Exception as exc:
+            return self._err(f"Desktop close needs psutil. Run: python -m pip install psutil. Details: {exc}")
+
+        wanted = {name.lower() for name in process_names}
+        current_pid = os.getpid()
+        matched = []
+        for proc in psutil.process_iter(["pid", "name"]):
+            try:
+                proc_name = (proc.info.get("name") or "").lower()
+                if proc.info.get("pid") == current_pid or proc_name not in wanted:
+                    continue
+                matched.append(proc)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        if not matched:
+            return self._ok(
+                {"app": key or display, "process_names": sorted(wanted), "closed": 0},
+                f"{display} is not running.",
+            )
+
+        closed = []
+        blocked = []
+        for proc in matched:
+            try:
+                proc.terminate()
+                closed.append(proc.info.get("name") or str(proc.pid))
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as exc:
+                blocked.append(f"{proc.info.get('name') or proc.pid}: {exc}")
+
+        gone, alive = psutil.wait_procs(matched, timeout=3)
+        for proc in alive:
+            try:
+                proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as exc:
+                blocked.append(f"{proc.info.get('name') or proc.pid}: {exc}")
+
+        count = len(gone) + max(0, len(alive) - len(blocked))
+        message = f"Closed {display} ({max(count, len(closed))} process(es))."
+        if blocked:
+            message += " Some windows could not be closed because Windows denied access."
+        return self._ok(
+            {
+                "app": key or display,
+                "process_names": sorted(wanted),
+                "closed": max(count, len(closed)),
+                "blocked": blocked,
+            },
+            message,
+        )
+
+    def _list_targets(self, target: str = "") -> dict:
+        apps = self._scan_apps()
+        app_names = sorted(apps.keys())
+        websites = sorted(self._WEBSITES.keys())
+        close_supported = sorted(self._PROCESS_ALIASES.keys())
+
+        filter_text = self._normalize_target(target)[1]
+        if filter_text:
+            app_names = [name for name in app_names if filter_text in name]
+            websites = [name for name in websites if filter_text in name]
+            close_supported = [name for name in close_supported if filter_text in name]
+
+        data = {
+            "installed_apps": app_names[:80],
+            "websites": websites,
+            "close_supported": close_supported,
+            "total_installed_apps": len(apps),
+        }
+        if filter_text:
+            message = (
+                f"Found {len(app_names)} app shortcut(s), {len(websites)} website shortcut(s), "
+                f"and {len(close_supported)} close action(s) matching {filter_text}."
+            )
+        else:
+            message = (
+                f"Found {len(apps)} installed app shortcut(s). "
+                "Say open app name, close app name, or list apps matching a name."
+            )
+        return self._ok(data, message)
+
     # -------------------------------------------------------
     # MAIN
     # -------------------------------------------------------
 
     def run(
         self,
+        action: str = "open",
         target: str = "",
         url: str = ""
     ) -> dict:
 
         try:
-
-            # ------------------------------------------------
-            # URL
-            # ------------------------------------------------
-
-            if url:
-
-                webbrowser.open(url)
-
-                return self._ok(
-                    {"url": url, "browser_action": self._browser_action(url, "Open URL")},
-                    f"Opened URL: {url}"
-                )
-
-            if not target:
-
-                return self._err(
-                    "No target specified."
-                )
-
-            target = (
-                target.lower()
-                .replace("open", "")
-                .replace("launch", "")
-                .strip()
-            )
-
-            known_app_paths = {
-                "spotify": [
-                    os.path.expandvars(r"%APPDATA%\Spotify\Spotify.exe"),
-                    os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WindowsApps\Spotify.exe"),
-                    r"C:\Program Files\Spotify\Spotify.exe",
-                    r"C:\Program Files (x86)\Spotify\Spotify.exe",
-                ],
-                "chrome": [
-                    os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
-                    os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
-                    os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-                ],
-                "google chrome": [
-                    os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
-                    os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
-                    os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-                ],
-            }
-
-            for app_path in known_app_paths.get(target, []):
-                if os.path.exists(app_path):
-                    os.startfile(app_path)
-                    return self._ok(
-                        {"app": target, "path": app_path},
-                        f"Opened {target}"
-                    )
-
-            exe = shutil.which(target)
-            if exe:
-                subprocess.Popen(exe)
-                return self._ok(
-                    {"exe": exe},
-                    f"Opened {target}"
-                )
-
-            apps = self._scan_apps()
-
-            if target in apps:
-                os.startfile(apps[target])
-                return self._ok(
-                    {"app": target},
-                    f"Opened {target}"
-                )
-
-            for app_name, app_path in apps.items():
-                if target in app_name:
-                    os.startfile(app_path)
-                    return self._ok(
-                        {"app": app_name},
-                        f"Opened {app_name}"
-                    )
-
-            if target == "spotify":
-                try:
-                    os.startfile("spotify:")
-                    return self._ok(
-                        {"app": "spotify", "protocol": "spotify:"},
-                        "Opened spotify"
-                    )
-                except Exception:
-                    pass
-
-            # ------------------------------------------------
-            # WEBSITE SHORTCUTS
-            # ------------------------------------------------
-
-            websites = {
-
-                "youtube": "https://youtube.com",
-                "gmail": "https://mail.google.com",
-                "calendar": "https://calendar.google.com",
-                "google calendar": "https://calendar.google.com",
-                "spotify": "https://open.spotify.com",
-                "linkedin": "https://linkedin.com",
-                "github": "https://github.com",
-                "google": "https://google.com",
-                "chatgpt": "https://chat.openai.com",
-                "netflix": "https://netflix.com",
-                "amazon": "https://amazon.in",
-                "hotstar": "https://hotstar.com"
-            }
-
-            if target in websites:
-
-                url = websites[target]
-                webbrowser.open(url)
-
-                return self._ok(
-                    {
-                        "website": target,
-                        "url": url,
-                        "browser_action": self._browser_action(url, f"Open {target}"),
-                    },
-                    f"Opened {target}"
-                )
-
-            # ------------------------------------------------
-            # EXECUTABLE ON PATH
-            # ------------------------------------------------
-
-            exe = shutil.which(target)
-
-            if exe:
-
-                subprocess.Popen(exe)
-
-                return self._ok(
-                    {"exe": exe},
-                    f"Opened {target}"
-                )
-
-            # ------------------------------------------------
-            # SCAN INSTALLED APPS
-            # ------------------------------------------------
-
-            apps = self._scan_apps()
-
-            # EXACT MATCH
-            if target in apps:
-
-                os.startfile(apps[target])
-
-                return self._ok(
-                    {"app": target},
-                    f"Opened {target}"
-                )
-
-            # PARTIAL MATCH
-            for app_name, app_path in apps.items():
-
-                if target in app_name:
-
-                    os.startfile(app_path)
-
-                    return self._ok(
-                        {"app": app_name},
-                        f"Opened {app_name}"
-                    )
-
-            # ------------------------------------------------
-            # FILE OR FOLDER
-            # ------------------------------------------------
-
-            path = Path(target)
-
-            if path.exists():
-
-                os.startfile(str(path))
-
-                return self._ok(
-                    {"path": str(path)},
-                    f"Opened {path.name}"
-                )
-
-            # ------------------------------------------------
-            # NOT INSTALLED
-            # ------------------------------------------------
-
-            search_url = (
-                "https://www.google.com/search?q="
-                f"download+{target}"
-            )
-
-            webbrowser.open(search_url)
-
-            return self._ok(
-                {"search": search_url},
-                f"{target} not installed. Opened install page."
-            )
+            action_key = (action or "open").lower().strip()
+            if action_key in {"open", "launch", "start", "run"}:
+                return self._open_target(target=target, url=url)
+            if action_key in {"close", "quit", "exit", "stop"}:
+                return self._close_target(target=target)
+            if action_key in {"list", "show", "find"}:
+                return self._list_targets(target=target)
+            return self._err(f"Unsupported app action: {action}")
 
         except Exception as e:
 

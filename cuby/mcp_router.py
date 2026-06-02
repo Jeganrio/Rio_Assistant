@@ -34,6 +34,7 @@ class MCPResponse(BaseModel):
 # ──────────────────────────────────────────────
 
 class AppLaunchRequest(BaseModel):
+    action: str = "open"       # open | close | list
     target: str = ""          # app name or full file/folder path
     url: str = ""             # optional URL to open in browser
 
@@ -158,7 +159,7 @@ async def list_tools():
 # ──────────────────────────────────────────────
 
 @router.post("/launch", response_model=MCPResponse,
-             summary="Launch an app, file, or folder")
+             summary="Open, close, or list apps, files, and folders")
 async def launch_app(req: AppLaunchRequest):
     """
     Open any application by name or full path.
@@ -169,17 +170,18 @@ async def launch_app(req: AppLaunchRequest):
     - `{"target": "C:/Projects/MyApp"}` → opens folder in Explorer
     - `{"url": "https://example.com"}` → opens URL in default browser
     """
-    result = mcp.run("app_launcher", target=req.target, url=req.url)
+    result = mcp.run("app_launcher", action=req.action, target=req.target, url=req.url)
     return _respond(result)
 
 
 @router.get("/launch", response_model=MCPResponse,
-            summary="Launch an app via query param")
+            summary="Open, close, or list apps via query param")
 async def launch_app_get(
+    action: str = Query("open", description="open, close, or list"),
     target: str = Query("", description="App name or path"),
     url: str = Query("", description="URL to open"),
 ):
-    result = mcp.run("app_launcher", target=target, url=url)
+    result = mcp.run("app_launcher", action=action, target=target, url=url)
     return _respond(result)
 
 

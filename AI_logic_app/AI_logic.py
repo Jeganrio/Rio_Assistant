@@ -2058,6 +2058,83 @@ def _extract_voice_email_address(q: str) -> str:
     return ""
 
 
+def _is_app_list_request(query: str) -> bool:
+    q = query.strip().lower()
+    return (
+        q in {
+            "list apps",
+            "list applications",
+            "show apps",
+            "show applications",
+            "show installed apps",
+            "show installed applications",
+            "what apps are installed",
+        }
+        or q.startswith(("list apps ", "show apps ", "find app ", "find apps "))
+    )
+
+
+def _extract_app_list_filter(query: str) -> str:
+    q = query.strip().lower()
+    for marker in (" matching ", " called ", " named ", " for "):
+        if marker in q:
+            return q.split(marker, 1)[1].strip()
+    for prefix in ("list apps", "show apps", "find apps", "find app"):
+        if q.startswith(prefix):
+            return q[len(prefix):].strip()
+    return ""
+
+
+def _extract_app_target(query: str, triggers: tuple[str, ...]) -> str:
+    q = query.strip()
+    for trigger in triggers:
+        if q.startswith(trigger):
+            target = q[len(trigger):].strip()
+            for filler in (
+                "the app",
+                "application",
+                "app",
+                "program",
+                "software",
+                "please",
+            ):
+                target = re.sub(rf"\b{re.escape(filler)}\b", "", target).strip()
+            return re.sub(r"\s+", " ", target)
+    return ""
+
+
+def _open_play_request(query: str) -> tuple[str, str] | None:
+    q = query.strip().lower()
+    if not q.startswith(("open ", "launch ", "start ", "run ")):
+        return None
+    if "play" not in q:
+        return None
+
+    platform = ""
+    if "spotify" in q:
+        platform = "spotify"
+    elif "youtube" in q:
+        platform = "youtube"
+    if not platform:
+        return None
+
+    song = q.split("play", 1)[1].strip()
+    for phrase in (
+        f"on {platform}",
+        f"in {platform}",
+        f"from {platform}",
+        platform,
+        "song",
+        "music",
+        "please",
+    ):
+        song = re.sub(rf"\b{re.escape(phrase)}\b", "", song).strip()
+    song = re.sub(r"\s+", " ", song)
+    if not song:
+        song = q
+    return platform, song
+
+
 def _try_mcp(query: str) -> str | None:
     """
     Parse the voice/text query for MCP intent.
@@ -2105,6 +2182,35 @@ def _try_mcp(query: str) -> str | None:
         )
         speak(msg)
         return msg
+
+    media_open = _open_play_request(q)
+    if media_open:
+        platform, song = media_open
+        result = mcp.run(
+            "media_control",
+            action="play",
+            platform=platform,
+            query=song,
+        )
+        return _speak_result(result)
+
+    if _is_app_list_request(q):
+        result = mcp.run(
+            "app_launcher",
+            action="list",
+            target=_extract_app_list_filter(q),
+        )
+        return _speak_result(result)
+
+    _close_triggers = ("close ", "quit ", "exit ")
+    if q.startswith(_close_triggers):
+        target = _extract_app_target(q, _close_triggers)
+        if target in {"all", "all apps", "everything", "all applications"}:
+            msg = "For safety, I will not close every app at once. Tell me the app name to close."
+            speak(msg)
+            return msg
+        result = mcp.run("app_launcher", action="close", target=target)
+        return _speak_result(result)
 
     if _is_briefing_request(q):
         city = app_settings.WEATHER_ALERT_CITY
@@ -2365,7 +2471,7 @@ def _try_mcp(query: str) -> str | None:
     for trigger in _open_triggers:
         if q.startswith(trigger):
             target = q[len(trigger):].strip()
-            result = mcp.run("app_launcher", target=target)
+            result = mcp.run("app_launcher", action="open", target=target)
             return _speak_result(result)
 
     # ── File System ───────────────────────────────────────────────────────
