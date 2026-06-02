@@ -113,16 +113,18 @@ except Exception:
 RUNNING = False
 BASE_DIR = app_settings.BASE_DIR
 inp_lang = "en-in"
-VOICE_LISTEN_TIMEOUT = 7
-VOICE_PHRASE_TIME_LIMIT = 12
+VOICE_LISTEN_TIMEOUT = 10
+VOICE_PHRASE_TIME_LIMIT = 16
 VOICE_RECOGNITION_TIMEOUT = 10
 VOICE_AFTER_SPEAK_PAUSE = 1.0
 VOICE_RECALIBRATE_AFTER = 3
-VOICE_ENERGY_MIN = 140
-VOICE_ENERGY_MAX = 850
-VOICE_ENERGY_SCALE = 0.85
+VOICE_ENERGY_MIN = 70
+VOICE_ENERGY_MAX = 520
+VOICE_ENERGY_SCALE = 0.55
+VOICE_DETECTION_RATIO = 0.62
+VOICE_SPEECH_CONTINUE_RATIO = 0.48
 VOICE_PREROLL_SECONDS = 0.35
-VOICE_AMBIENT_SAMPLES = 8
+VOICE_AMBIENT_SAMPLES = 14
 
 _VOICE_RECOGNIZER = None
 _VOICE_LOCK = threading.Lock()
@@ -930,13 +932,13 @@ def _get_voice_recognizer():
     global _VOICE_RECOGNIZER
     if _VOICE_RECOGNIZER is None:
         _VOICE_RECOGNIZER = sr.Recognizer()
-        _VOICE_RECOGNIZER.pause_threshold = 0.9
-        _VOICE_RECOGNIZER.phrase_threshold = 0.18
-        _VOICE_RECOGNIZER.non_speaking_duration = 0.45
+        _VOICE_RECOGNIZER.pause_threshold = 1.05
+        _VOICE_RECOGNIZER.phrase_threshold = 0.14
+        _VOICE_RECOGNIZER.non_speaking_duration = 0.6
         _VOICE_RECOGNIZER.dynamic_energy_threshold = False
         _VOICE_RECOGNIZER.dynamic_energy_adjustment_damping = 0.12
         _VOICE_RECOGNIZER.dynamic_energy_ratio = 1.18
-        _VOICE_RECOGNIZER.energy_threshold = 260
+        _VOICE_RECOGNIZER.energy_threshold = 180
         _VOICE_RECOGNIZER.operation_timeout = VOICE_RECOGNITION_TIMEOUT
     return _VOICE_RECOGNIZER
 
@@ -1020,7 +1022,7 @@ def _recognize_voice_audio(recognizer, audio) -> str:
 def _capture_voice_audio(recognizer, source, seconds: int) -> sr.AudioData:
     timeout_seconds = max(2.0, min(float(seconds), float(VOICE_LISTEN_TIMEOUT)))
     phrase_limit = max(3.0, min(float(seconds), float(VOICE_PHRASE_TIME_LIMIT)))
-    threshold = int(recognizer.energy_threshold)
+    threshold = max(VOICE_ENERGY_MIN, int(recognizer.energy_threshold * VOICE_DETECTION_RATIO))
     chunk = source.CHUNK
     sample_width = source.SAMPLE_WIDTH
     sample_rate = source.SAMPLE_RATE
@@ -1041,9 +1043,10 @@ def _capture_voice_audio(recognizer, source, seconds: int) -> sr.AudioData:
         if not started and now >= wait_deadline:
             if ambient:
                 ambient_peak = max(ambient)
+                ambient_avg = sum(ambient) / len(ambient)
                 recognizer.energy_threshold = max(
                     VOICE_ENERGY_MIN,
-                    min(VOICE_ENERGY_MAX, max(threshold, ambient_peak * 2.2)),
+                    min(VOICE_ENERGY_MAX, max(ambient_peak * 1.6, ambient_avg * 2.4)),
                 )
             raise sr.WaitTimeoutError("listening timed out while waiting for phrase to start")
         if started and now - speech_started_at >= phrase_limit:
@@ -1070,7 +1073,7 @@ def _capture_voice_audio(recognizer, source, seconds: int) -> sr.AudioData:
             continue
 
         frames.append(buffer)
-        if rms > threshold * 0.72:
+        if rms > threshold * VOICE_SPEECH_CONTINUE_RATIO:
             last_loud_at = now
         elif now - speech_started_at >= phrase_threshold and now - last_loud_at >= pause_threshold:
             break
@@ -1080,7 +1083,7 @@ def _capture_voice_audio(recognizer, source, seconds: int) -> sr.AudioData:
     return sr.AudioData(b"".join(frames), sample_rate, sample_width)
 
 
-def takecommandexceptional(seconds: int = 5) -> str:
+def takecommandexceptional(seconds: int = 8) -> str:
     """Listen for a voice command and return it as lowercase text."""
     global _VOICE_MISSES
     if not VOICE_AVAILABLE:
@@ -1125,14 +1128,18 @@ def takecommandexceptional(seconds: int = 5) -> str:
             return query
         except sr.WaitTimeoutError:
             _VOICE_MISSES += 1
+            recognizer.energy_threshold = max(
+                VOICE_ENERGY_MIN,
+                min(VOICE_ENERGY_MAX, recognizer.energy_threshold * 0.9),
+            )
             _clamp_voice_threshold(recognizer)
             print("No speech detected.")
             return ""
         except sr.UnknownValueError:
             _VOICE_MISSES += 1
-            recognizer.energy_threshold = min(
-                VOICE_ENERGY_MAX,
-                max(VOICE_ENERGY_MIN, recognizer.energy_threshold * 1.08),
+            recognizer.energy_threshold = max(
+                VOICE_ENERGY_MIN,
+                min(VOICE_ENERGY_MAX, recognizer.energy_threshold * 0.92),
             )
             print("Could not understand audio.")
             return ""
