@@ -733,7 +733,11 @@
     let browserVoices = [];
     let browserNoSpeechCount = 0;
     let browserPausedForSpeech = false;
-    const wakeWords = ['cuby', 'cupy', 'cuppy', 'kuby', 'cubie', 'cubi', 'cubby', 'cubey', 'quby', 'qby', 'cooby', 'coby'];
+    const wakeWords = [
+      'cuby', 'cupy', 'cuppy', 'kuby', 'kubi', 'cubie', 'cubi',
+      'cubby', 'cubey', 'quby', 'qby', 'cooby', 'coby',
+      'kavi', 'gopi', 'gobi', 'goby', 'gooby', 'cube'
+    ];
     const wakeWordsWithCopy = [...wakeWords, 'copy'];
 
     function toggleMenu() {

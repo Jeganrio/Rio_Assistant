@@ -226,10 +226,15 @@ async def execute_command(request: CommandRequest,
             return {"status": "success", "message": "Command processed",
                     "data": {"response": response}}
 
-        AI_logic.GenAI().google_search(command)
+        response = f"I did not find a direct CUBY action for {command}. I searched the web for it."
+        try:
+            AI_logic.GenAI().google_search(command)
+        except Exception:
+            response = f"I did not find a direct CUBY action for {command}."
+        AI_logic.speak(response)
         return {"status": "success",
-                "message": "Command processed with Google search",
-                "data": {"command": command}}
+                "message": "Search fallback used",
+                "data": {"command": command, "response": response}}
 
     except Exception as e:
         raise HTTPException(status_code=500,

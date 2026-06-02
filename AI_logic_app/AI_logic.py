@@ -802,12 +802,15 @@ def _wake_aliases() -> tuple[str, ...]:
     return (
         "hey cuby", "hi cuby", "ok cuby", "hello cuby",
         "hey cupy", "hi cupy", "ok cupy", "hello cupy",
-        "hey cuppy", "hey kuby", "hey cubie", "hey cubi",
+        "hey cuppy", "hey kuby", "hey kubi", "hey cubie", "hey cubi",
         "hey cubby", "hi cubby", "ok cubby", "hello cubby",
         "hey copy", "hi copy", "ok copy", "hello copy",
         "hey cubey", "hey quby", "hey qby", "hey cooby", "hey coby",
-        "cuby", "cupy", "cuppy", "kuby", "cubie", "cubi",
+        "hey kavi", "hey gopi", "hey gobi", "hey goby", "hey gooby",
+        "hey cube", "hi cube", "ok cube", "hello cube",
+        "cuby", "cupy", "cuppy", "kuby", "kubi", "cubie", "cubi",
         "cubby", "cubey", "quby", "qby", "cooby", "coby",
+        "kavi", "gopi", "gobi", "goby", "gooby", "cube",
     )
 
 
@@ -1007,7 +1010,11 @@ def takecommandexceptional(seconds: int = 5) -> str:
                 "killbe", "killby", "cubic", "cubyc", "hey cupy",
                 "hey cuppy", "hey kuby", "hey cubby", "hey copy",
                 "hi copy", "ok copy", "hello copy", "hey cubey",
-                "hey quby", "hey qby", "cupy", "cuppy", "kuby", "cubby", "cubey", "quby", "qby",
+                "hey kubi", "hey kavi", "hey gopi", "hey gobi",
+                "hey goby", "hey gooby", "hey cube", "hi cube",
+                "ok cube", "hello cube", "hey quby", "hey qby",
+                "cupy", "cuppy", "kuby", "kubi", "cubby", "cubey",
+                "quby", "qby", "kavi", "gopi", "gobi", "goby", "gooby", "cube",
             ]
             for alias in aliases:
                 if alias in query:
