@@ -1016,6 +1016,17 @@
       }
     }
 
+    function assistantResponseFromApi(data, command) {
+      const payload = data && data.data ? data.data : {};
+      if (payload.response) return payload.response;
+      const message = data && data.message ? data.message : '';
+      if (message === 'Command processed with Google search' || message === 'Search fallback used') {
+        const query = payload.command || command || 'that';
+        return `I did not find a direct CUBY action for ${query}.`;
+      }
+      return message || 'No response';
+    }
+
     async function sendCommand(command, options = {}) {
       command = normalizeLiveCommand(command);
       if (!command) return;
@@ -1029,9 +1040,7 @@
           body: JSON.stringify({ command })
         });
         const data = await res.json();
-        const response = data && data.data && data.data.response
-          ? data.data.response
-          : data.message || 'No response';
+        const response = assistantResponseFromApi(data, command);
         showText(response, moodFromText(response), true);
         updateBrowserLanguageFromText(`${command} ${response}`);
         updateBrowserVoiceGenderFromText(`${command} ${response}`);

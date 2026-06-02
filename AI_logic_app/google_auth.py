@@ -78,9 +78,9 @@ def load_client_config(credentials_path: str | Path) -> dict | None:
 
 def google_not_connected_message(service_name: str) -> str:
     return (
-        f"{service_name} is not connected on this deployment. "
-        "Add GOOGLE_CREDENTIALS_JSON and the matching OAuth token JSON as Render secret "
-        "environment variables, or use this feature from the local desktop app."
+        f"{service_name} is not connected on the live server yet. "
+        "Use this from the local desktop app, or connect Google in Render Environment "
+        "with GOOGLE_CREDENTIALS_B64 and the matching OAuth token secret."
     )
 
 

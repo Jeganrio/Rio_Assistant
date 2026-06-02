@@ -2018,6 +2018,15 @@ class BriefingTool(MCPTool):
         ]
         return "; ".join(values)
 
+    @staticmethod
+    def _is_google_connection_warning(result: dict) -> bool:
+        message = str((result or {}).get("message", "")).lower()
+        return (
+            "not connected on this deployment" in message
+            or "not connected on the live server" in message
+            or ("google_credentials" in message and "token" in message)
+        )
+
     def run(
         self,
         city: str = "",
@@ -2173,7 +2182,7 @@ class BriefingTool(MCPTool):
                 })
             else:
                 sections.append({"title": "Calendar", "text": "No calendar events found today."})
-        elif include_calendar:
+        elif include_calendar and not self._is_google_connection_warning(calendar_result):
             sections.append({"title": "Calendar", "text": calendar_result.get("message", "Calendar unavailable.")})
 
         if include_reminders and reminder_result.get("status") == "ok":
@@ -2198,7 +2207,7 @@ class BriefingTool(MCPTool):
                 })
             else:
                 sections.append({"title": "Gmail", "text": "No interview, assessment, or meeting emails found today."})
-        elif include_gmail:
+        elif include_gmail and not self._is_google_connection_warning(gmail_result):
             sections.append({"title": "Gmail", "text": gmail_result.get("message", "Gmail unavailable.")})
 
         if news_result.get("status") == "ok" and articles:
