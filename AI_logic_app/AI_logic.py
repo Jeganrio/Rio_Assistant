@@ -118,9 +118,9 @@ VOICE_PHRASE_TIME_LIMIT = 20
 VOICE_RECOGNITION_TIMEOUT = 10
 VOICE_AFTER_SPEAK_PAUSE = 1.4
 VOICE_RECALIBRATE_AFTER = 3
-VOICE_ENERGY_MIN = 150
-VOICE_ENERGY_MAX = 680
-VOICE_ENERGY_SCALE = 0.75
+VOICE_ENERGY_MIN = 500
+VOICE_ENERGY_MAX = 1600
+VOICE_ENERGY_SCALE = 1.0
 VOICE_DETECTION_RATIO = 0.70
 VOICE_SPEECH_CONTINUE_RATIO = 0.55
 VOICE_PREROLL_SECONDS = 0.35
@@ -938,7 +938,7 @@ def _get_voice_recognizer():
         _VOICE_RECOGNIZER.dynamic_energy_threshold = False
         _VOICE_RECOGNIZER.dynamic_energy_adjustment_damping = 0.12
         _VOICE_RECOGNIZER.dynamic_energy_ratio = 1.18
-        _VOICE_RECOGNIZER.energy_threshold = 220
+        _VOICE_RECOGNIZER.energy_threshold = 600
         _VOICE_RECOGNIZER.operation_timeout = VOICE_RECOGNITION_TIMEOUT
     return _VOICE_RECOGNIZER
 
@@ -1095,7 +1095,7 @@ def takecommandexceptional(seconds: int = 8) -> str:
 
         try:
             with sr.Microphone() as source:
-                print(f"listening... threshold={recognizer.energy_threshold:.0f}")
+                print("listening...")
                 audio = _capture_voice_audio(recognizer, source, seconds)
             query = _recognize_voice_audio(recognizer, audio)
 
