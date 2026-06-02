@@ -643,12 +643,16 @@
 
     .updates-panel {
       position: fixed;
-      inset: 118px 32px 250px;
+      inset: 96px 28px 250px;
       z-index: 5;
       pointer-events: none;
     }
 
     .updates-panel[hidden] { display: none; }
+
+    body.mail-flow-active .updates-panel {
+      display: none;
+    }
 
     .updates-title { display: none; }
 
@@ -662,9 +666,9 @@
 
     .updates-list li {
       position: absolute;
-      width: clamp(270px, 16vw, 350px);
-      min-height: 118px;
-      max-height: 152px;
+      width: clamp(260px, 16vw, 330px);
+      min-height: 108px;
+      max-height: 136px;
       padding: 14px 16px;
       border: 1px solid rgba(255,255,255,0.10);
       border-radius: 8px;
@@ -674,7 +678,7 @@
       font-size: clamp(16px, 1.05vw, 18px);
       line-height: 1.36;
       overflow-wrap: anywhere;
-      overflow: visible;
+      overflow: hidden;
       box-shadow: 0 0 22px color-mix(in srgb, var(--light-main), transparent 66%);
       animation: updateFloat 2.8s ease-in-out infinite;
       transition:
@@ -744,25 +748,36 @@
       right: auto !important;
       top: 0 !important;
       bottom: auto !important;
-      width: min(720px, calc(100vw - 64px));
+      width: min(640px, calc(100vw - 56px));
       height: auto;
-      min-height: 150px;
-      max-height: min(46vh, 430px);
+      min-height: 140px;
+      max-height: min(34vh, 320px);
       z-index: 12;
       opacity: 1;
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
       border-color: color-mix(in srgb, var(--light-main), white 36%);
       box-shadow:
         0 0 44px color-mix(in srgb, var(--light-main), transparent 36%),
         inset 0 0 22px rgba(255,255,255,0.05);
       animation: none;
-      transform: translateX(-50%) scale(1.04);
+      transform: translateX(-50%);
     }
 
     .updates-list li.is-active::before,
     .updates-list li.is-active::after {
-      opacity: 0.95;
-      animation: presentHand 0.72s ease both;
+      display: none;
+    }
+
+    .updates-list li.is-active::-webkit-scrollbar {
+      display: none;
+    }
+
+    body.briefing-focus .updates-list li:not(.is-active) {
+      opacity: 0.46;
+      transform: scale(0.94);
     }
 
     .updates-list li:nth-child(2n) {
@@ -853,8 +868,8 @@
       .updates-list li:nth-child(n+5) { display: none; }
       .updates-list li.is-active {
         top: 0 !important;
-        width: min(430px, calc(100vw - 28px));
-        max-height: min(42vh, 360px);
+        width: min(420px, calc(100vw - 28px));
+        max-height: min(38vh, 330px);
       }
       .updates-list li.is-active span {
         display: block;
@@ -1274,7 +1289,7 @@
       activeBriefingIndex = index;
       document.body.classList.add('briefing-focus');
       clearTimeout(briefingFocusTimer);
-      const holdMs = Math.min(30000, Math.max(14000, fullText.length * 85));
+      const holdMs = Math.min(45000, Math.max(20000, fullText.length * 140));
       briefingFocusTimer = setTimeout(() => {
         if (activeBriefingIndex === index) {
           clearBriefingFocus();
@@ -1433,6 +1448,8 @@
       text = text.replace(/\b(underscore|under score)\b/g, '_');
       text = text.replace(/\b(dash|hyphen|minus)\b/g, '-');
       text = text.replace(/\b(at|add|ad)\b/g, '@');
+      text = text.replace(/\s*@\s*/g, '@');
+      text = text.replace(/@+\s*gmail\.com\b/g, '@gmail.com');
       text = text.replace(/\b(r|are|our)\s+gmail\.com\b/g, '@gmail.com');
       text = text.replace(/\bgmail\.com\b/g, '@gmail.com');
       text = text.replace(/@@+/g, '@');
@@ -1477,11 +1494,13 @@
       const sendButton = document.getElementById('sendButton');
       if (!mailFlowState) {
         panel.hidden = true;
+        document.body.classList.remove('mail-flow-active');
         input.placeholder = 'Type command';
         sendButton.textContent = 'Send';
         return;
       }
       panel.hidden = false;
+      document.body.classList.add('mail-flow-active');
       document.getElementById('mailTo').textContent = mailFlowState.to || 'Waiting for recipient';
       document.getElementById('mailSubject').textContent = mailFlowState.subject || 'Waiting for subject';
       document.getElementById('mailBody').textContent = mailFlowState.body || 'Waiting for message';

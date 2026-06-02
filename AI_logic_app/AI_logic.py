@@ -113,16 +113,16 @@ except Exception:
 RUNNING = False
 BASE_DIR = app_settings.BASE_DIR
 inp_lang = "en-in"
-VOICE_LISTEN_TIMEOUT = 10
-VOICE_PHRASE_TIME_LIMIT = 16
+VOICE_LISTEN_TIMEOUT = 12
+VOICE_PHRASE_TIME_LIMIT = 20
 VOICE_RECOGNITION_TIMEOUT = 10
-VOICE_AFTER_SPEAK_PAUSE = 1.0
+VOICE_AFTER_SPEAK_PAUSE = 1.4
 VOICE_RECALIBRATE_AFTER = 3
-VOICE_ENERGY_MIN = 70
-VOICE_ENERGY_MAX = 520
-VOICE_ENERGY_SCALE = 0.55
-VOICE_DETECTION_RATIO = 0.62
-VOICE_SPEECH_CONTINUE_RATIO = 0.48
+VOICE_ENERGY_MIN = 150
+VOICE_ENERGY_MAX = 680
+VOICE_ENERGY_SCALE = 0.75
+VOICE_DETECTION_RATIO = 0.70
+VOICE_SPEECH_CONTINUE_RATIO = 0.55
 VOICE_PREROLL_SECONDS = 0.35
 VOICE_AMBIENT_SAMPLES = 14
 
@@ -932,13 +932,13 @@ def _get_voice_recognizer():
     global _VOICE_RECOGNIZER
     if _VOICE_RECOGNIZER is None:
         _VOICE_RECOGNIZER = sr.Recognizer()
-        _VOICE_RECOGNIZER.pause_threshold = 1.05
+        _VOICE_RECOGNIZER.pause_threshold = 1.35
         _VOICE_RECOGNIZER.phrase_threshold = 0.14
-        _VOICE_RECOGNIZER.non_speaking_duration = 0.6
+        _VOICE_RECOGNIZER.non_speaking_duration = 0.8
         _VOICE_RECOGNIZER.dynamic_energy_threshold = False
         _VOICE_RECOGNIZER.dynamic_energy_adjustment_damping = 0.12
         _VOICE_RECOGNIZER.dynamic_energy_ratio = 1.18
-        _VOICE_RECOGNIZER.energy_threshold = 180
+        _VOICE_RECOGNIZER.energy_threshold = 220
         _VOICE_RECOGNIZER.operation_timeout = VOICE_RECOGNITION_TIMEOUT
     return _VOICE_RECOGNIZER
 
@@ -1041,13 +1041,6 @@ def _capture_voice_audio(recognizer, source, seconds: int) -> sr.AudioData:
     while True:
         now = time.monotonic()
         if not started and now >= wait_deadline:
-            if ambient:
-                ambient_peak = max(ambient)
-                ambient_avg = sum(ambient) / len(ambient)
-                recognizer.energy_threshold = max(
-                    VOICE_ENERGY_MIN,
-                    min(VOICE_ENERGY_MAX, max(ambient_peak * 1.6, ambient_avg * 2.4)),
-                )
             raise sr.WaitTimeoutError("listening timed out while waiting for phrase to start")
         if started and now - speech_started_at >= phrase_limit:
             break
@@ -1128,19 +1121,12 @@ def takecommandexceptional(seconds: int = 8) -> str:
             return query
         except sr.WaitTimeoutError:
             _VOICE_MISSES += 1
-            recognizer.energy_threshold = max(
-                VOICE_ENERGY_MIN,
-                min(VOICE_ENERGY_MAX, recognizer.energy_threshold * 0.9),
-            )
             _clamp_voice_threshold(recognizer)
             print("No speech detected.")
             return ""
         except sr.UnknownValueError:
             _VOICE_MISSES += 1
-            recognizer.energy_threshold = max(
-                VOICE_ENERGY_MIN,
-                min(VOICE_ENERGY_MAX, recognizer.energy_threshold * 0.92),
-            )
+            _clamp_voice_threshold(recognizer)
             print("Could not understand audio.")
             return ""
         except sr.RequestError as exc:
@@ -2137,10 +2123,14 @@ def _extract_voice_email_address(q: str) -> str:
     value = q.lower()
     value = re.sub(r"\bg\s*mail\b", "gmail", value)
     value = re.sub(r"\bdot\b", ".", value)
+    value = re.sub(r"\b(?:point|period|full stop)\b", ".", value)
     value = re.sub(r"\s*\.\s*", ".", value)
     value = re.sub(r"\b(?:at|add|ad)\b", "@", value)
+    value = re.sub(r"\s*@\s*", "@", value)
+    value = re.sub(r"@+\s*gmail\.com\b", "@gmail.com", value)
     value = re.sub(r"\b(?:r|are|our)\s+gmail\.com\b", "@gmail.com", value)
     value = re.sub(r"(?<!@)\bgmail\.com\b", "@gmail.com", value)
+    value = re.sub(r"@{2,}", "@", value)
 
     candidates = []
     for marker in (" to ", " for "):
@@ -2197,24 +2187,29 @@ def _collect_voice_mail_details(
     body: str,
 ) -> tuple[str, str, str] | None:
     if not to_email:
-        recipient = _ask_voice_mail_field(
-            "Who should I send this Gmail to? Say the full email address.",
-            seconds=22,
-        )
-        to_email = _extract_voice_email_address(recipient) or _email_from_saved_contact(recipient)
+        for attempt in range(2):
+            prompt = (
+                "Who should I send this Gmail to? Say the full email address."
+                if attempt == 0
+                else "Please repeat the recipient email slowly. For example, name at gmail dot com."
+            )
+            recipient = _ask_voice_mail_field(prompt, seconds=30)
+            to_email = _extract_voice_email_address(recipient) or _email_from_saved_contact(recipient)
+            if to_email:
+                break
         if not to_email:
             speak("I could not understand the recipient email address. Gmail cancelled.")
             return None
 
     if not subject:
-        subject = _ask_voice_mail_field("What is the subject for this Gmail?", seconds=22)
+        subject = _ask_voice_mail_field("What is the subject for this Gmail?", seconds=26)
         subject = re.sub(r"^(subject|title)\s+", "", subject).strip()
         if not subject:
             speak("I did not hear the subject. Gmail cancelled.")
             return None
 
     if not body:
-        body = _ask_voice_mail_field("What content should I send in the Gmail?", seconds=40)
+        body = _ask_voice_mail_field("What content should I send in the Gmail?", seconds=50)
         body = re.sub(r"^(body|content|message)\s+", "", body).strip()
         if not body:
             speak("I did not hear the content. Gmail cancelled.")
